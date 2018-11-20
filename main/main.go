@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"time"
 	"runtime"
+	"os"
 )
 
 func main() {
-	fmt.Println("Starting lattice plotter v0.9.7")
+	fmt.Println("Starting lattice plotter v0.9.8")
 
 	initMaps()          // Initialize handler map and output map
 	warmCache()         // Setup lookup table
@@ -16,6 +17,9 @@ func main() {
 
 	fmt.Printf("Address set: %s\n", address)
 	baseDir = fmt.Sprintf(baseDir, address)
+	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
+		os.MkdirAll(baseDir, 0755)
+	}
 	numPlotsToMake := int64(2147483647)
 	endNumPlots := int(numPlotsToMake)
 

@@ -69,14 +69,9 @@ func initMaps() {
 }
 
 func warmCache() {
-	// Allocate indTable
+	// Allocate + fill indTable
 	for i := 0; i < 4096; i++ {
-		indTable = append(indTable, "")
-	}
-	// Fill indTable
-	for i := 0; i < 4096; i++ {
-		strPrefix := fmt.Sprintf("%04d", i)
-		indTable[i] = strPrefix
+		indTable = append(indTable, fmt.Sprintf("%04d", i))
 	}
 }
 
