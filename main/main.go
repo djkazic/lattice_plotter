@@ -45,7 +45,7 @@ func main() {
 		processPlots(i)
 	}
 	end := time.Since(start)
-	fmt.Printf("%d plots made in %s\n", numPlotsToMake, end)
+	fmt.Printf("Plotter runtime: %s\n", end)
 }
 
 func decideStartPoint() {

@@ -8,13 +8,13 @@ import (
 	"github.com/peterbourgon/diskv"
 	"github.com/phf/go-queue/queue"
 	"github.com/tevino/abool"
-	"math/big"
 	"os"
 	"os/signal"
 	"runtime"
 	"strconv"
 	"sync"
 	"syscall"
+	"github.com/mr-tron/base58"
 )
 
 type WriteDataParams struct {
@@ -186,35 +186,15 @@ func validateAddress(address string) bool {
 	if len(address) < 34 {
 		return false
 	}
-	pubKeyHash := base58Decode([]byte(address))
+	pubKeyHash, err := base58.Decode(address)
+	if err != nil {
+		fmt.Println("Could not decode address provided")
+		return false
+	}
 	actualChecksum := pubKeyHash[len(pubKeyHash)-addressChecksumLen:]
 	version := pubKeyHash[0]
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-addressChecksumLen]
 	targetChecksum := checksum(append([]byte{version}, pubKeyHash...))
 
 	return bytes.Equal(actualChecksum, targetChecksum)
-}
-
-func base58Decode(input []byte) []byte {
-	var b58Alphabet = []byte("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
-	result := big.NewInt(0)
-	zeroBytes := 0
-
-	for _, b := range input {
-		if b == b58Alphabet[0] {
-			zeroBytes++
-		} else {
-			break
-		}
-	}
-	payload := input[zeroBytes:]
-	for _, b := range payload {
-		charIndex := bytes.IndexByte(b58Alphabet, b)
-		result.Mul(result, big.NewInt(58))
-		result.Add(result, big.NewInt(int64(charIndex)))
-	}
-	decoded := result.Bytes()
-	decoded = append(bytes.Repeat([]byte{byte(0x00)}, zeroBytes), decoded...)
-
-	return decoded
 }
