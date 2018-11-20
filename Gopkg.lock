@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  digest = "1:aa855bda8630186a6a2f33ac0142fd8c1644622af2e164bc3d8bbb69978b6467"
+  name = "github.com/Jeffail/tunny"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "4921fff29480bad359ad2fb3271fb461c8ffe1fc"
+  version = "0.1.2"
+
+[[projects]]
   digest = "1:6d9f91ff6cc1a7fa2f1c7025b0dc50ea7cd2a9b6869205bc7f69f484a349c731"
   name = "github.com/dchest/blake2b"
   packages = ["."]
@@ -52,6 +60,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/Jeffail/tunny",
     "github.com/magical/argon2",
     "github.com/peterbourgon/diskv",
     "github.com/phf/go-queue/queue",
