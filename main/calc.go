@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+	"sync"
 )
 
 func processPlots(nonce int) {
@@ -67,13 +68,12 @@ func computeNode(root []byte) {
 	var rootHash = hex.EncodeToString(root)
 
 	hmLen = hashMap.Len()
-
 	if hmLen < totalNodes {
 		// Block until children node hashes calculated
 		childHashes := calcChildren(root, &leftHash, &rightHash)
 
 		// Store children hashes in hashMap
-		hashMap.Set(rootHash[:16], childHashes)
+		hashMap.Set(rootHash[:32], childHashes)
 
 		// Compute sub-nodes for left and right children
 		computeNode(leftHash)
@@ -82,30 +82,36 @@ func computeNode(root []byte) {
 }
 
 func calcChildren(rootBytes []byte, leftHash *[]byte, rightHash *[]byte) [][]byte {
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+	go calcSubNode(rootBytes, zeroStrBytes, leftHash, &wg)
+	go calcSubNode(rootBytes, oneStrBytes, rightHash, &wg)
+	wg.Wait()
+
+	return [][]byte{*leftHash, *rightHash}
+}
+
+func calcSubNode(rootBytes []byte, input []byte, target *[]byte, wg *sync.WaitGroup) {
 	var hashBuf bytes.Buffer
 
 	hashBuf.Write(rootBytes)
-	hashBuf.Write(zeroStrBytes)
-	*leftHash = calcHash(hashBuf.Bytes())
+	hashBuf.Write(input)
+	*target = calcHash(hashBuf.Bytes())
 	hashBuf.Reset()
-	hashBuf.Write(rootBytes)
-	hashBuf.Write(oneStrBytes)
-	*rightHash = calcHash(hashBuf.Bytes())
-	hashBuf.Reset()
-
-	return [][]byte{*leftHash, *rightHash}
+	wg.Done()
 }
 
 func serializeHashes(hashList *[]string, currHash []byte) {
 	currHashStr := hex.EncodeToString(currHash)
 	*hashList = append(*hashList, currHashStr)
-	tmp, ok := hashMap.Get(currHashStr[:16])
+	tmp, ok := hashMap.Get(currHashStr[:32])
 
 	if ok && tmp != nil {
 		val := tmp.([][]byte)
 		prQueue.PushBack(val[0])
 		prQueue.PushBack(val[1])
-		hashMap.Del(currHashStr[:16])
+		hashMap.Del(currHashStr[:32])
 	}
 	for len(*hashList) < totalNodes && prQueue.Len() > 0 {
 		head := prQueue.PopFront().([]byte)
