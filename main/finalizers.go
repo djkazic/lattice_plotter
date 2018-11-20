@@ -10,7 +10,7 @@ import (
 func writeData(payload interface{}) interface{} {
 	var buffer bytes.Buffer
 
-	if db != nil && !quitNow {
+	if db != nil {
 		pdp := payload.(*WriteDataParams)
 		ind := pdp.ind
 		hash := pdp.hash
@@ -38,7 +38,7 @@ func writeData(payload interface{}) interface{} {
 func validateData(payload interface{}) interface{} {
 	var buffer bytes.Buffer
 
-	if db != nil && !quitNow {
+	if db != nil {
 		pdp := payload.(*ProcessDataParams)
 		ind := pdp.ind
 		hash := pdp.hash
@@ -62,7 +62,7 @@ func validateData(payload interface{}) interface{} {
 		} else {
 			strVal := string(val)
 			if strVal != hash {
-				quitNow = true
+				quitNow.Set()
 				fmt.Printf("Error detected on line %d of bucket %s!\n", nonce+1, strKey)
 				fmt.Printf("actual: %s\n", strVal)
 				fmt.Printf("wanted: %s\n", hash)
