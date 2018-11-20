@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"time"
+	"runtime"
 )
 
 func main() {
@@ -22,6 +23,13 @@ func main() {
 	openDB()			// Badger setup
 	getNonceCount()     // Get nonceCount
 
+	// Set max workers for compute
+	maxWorkers = runtime.NumCPU() - 1
+	if maxWorkers == 0 {
+		maxWorkers = 1
+	}
+
+	// Start
 	start := time.Now()
 	if verifyPlots {
 		endNumPlots = numExistingPlots
@@ -29,8 +37,9 @@ func main() {
 		// Prefer the smaller of shortestLen or startPoint
 		decideStartPoint()
 	}
+	// Main loop
 	for i := startPoint; i < endNumPlots; i++ {
-		if quitNow {
+		if quitNow.IsSet() {
 			break
 		}
 		processPlots(i)

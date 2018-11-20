@@ -56,6 +56,14 @@
   pruneopts = "UT"
   revision = "9abe38d0371deb4049011737cbd30e4ba80c673b"
 
+[[projects]]
+  branch = "master"
+  digest = "1:93d6687fc19da8a35c7352d72117a6acd2072dfb7e9bfd65646227bf2a913b2a"
+  name = "github.com/tevino/abool"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "9b9efcf221b50905aab9bbabd3daed56dc10f339"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -64,6 +72,7 @@
     "github.com/magical/argon2",
     "github.com/peterbourgon/diskv",
     "github.com/phf/go-queue/queue",
+    "github.com/tevino/abool",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

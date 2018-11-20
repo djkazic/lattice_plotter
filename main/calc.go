@@ -4,18 +4,20 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/Jeffail/tunny"
 	"strconv"
 	"time"
 )
 
-var validatePool = tunny.NewFunc(maxWorkers, validateData)
-var strNonce string
-
 func processPlots(nonce int) {
+	var strNonce string
+
 	var concatBuffer bytes.Buffer
+
 	var start time.Time
 	var end time.Duration
+
+	var pdp *ProcessDataParams
+	var wdp *WriteDataParams
 
 	strNonce = strconv.Itoa(nonce)
 	concatBuffer.WriteString(address)
@@ -29,27 +31,22 @@ func processPlots(nonce int) {
 	prQueue.Init()                           // Reset processQueue
 	serializeHashes(&hashList, startingHash) // Post process hashMap -> hashList
 
-	if !quitNow {
-		var pdp *ProcessDataParams
-		var wdp *WriteDataParams
-
+	if !quitNow.IsSet() {
 		if verifyPlots {
 			// Validate for hashList
-			for ind, hash := range hashList {
-				pdp = &ProcessDataParams{ind, hash, nonce}
-				validatePool.Process(pdp)
+			for ind := range hashList {
+				pdp = &ProcessDataParams{ind, hashList[ind], nonce}
+				validateData(pdp)
 			}
 			end = time.Since(start)
-			if quitNow { return }
 			fmt.Printf("Nonce %s verified in %s\n", strNonce, end)
 		} else {
 			// Write for hashList
-			for ind, hash := range hashList {
-				wdp = &WriteDataParams{ind, hash, nonce}
+			for ind := range hashList {
+				wdp = &WriteDataParams{ind, hashList[ind], nonce}
 				writeData(wdp)
 			}
 			end = time.Since(start)
-			if quitNow { return }
 			fmt.Printf("Nonce %s timing: %s\n", strNonce, end)
 		}
 	}

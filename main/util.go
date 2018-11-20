@@ -7,6 +7,7 @@ import (
 	"github.com/magical/argon2"
 	"github.com/peterbourgon/diskv"
 	"github.com/phf/go-queue/queue"
+	"github.com/tevino/abool"
 	"math/big"
 	"os"
 	"os/signal"
@@ -46,7 +47,7 @@ var (
 
 var (
 	verifyPlots = false
-	quitNow = false
+	quitNow *abool.AtomicBool
 	gracefulStop = make(chan os.Signal)
 )
 
@@ -60,7 +61,7 @@ var (
 
 	hashList []string
 	prQueue  queue.Queue
-	maxWorkers = runtime.NumCPU()
+	maxWorkers int
 )
 
 func initMaps() {
@@ -78,13 +79,13 @@ func warmCache() {
 }
 
 func setupGracefulStop() {
+	quitNow = abool.New()
 	signal.Notify(gracefulStop, syscall.SIGTERM)
 	signal.Notify(gracefulStop, syscall.SIGINT)
 	go func() {
 		<-gracefulStop
 		fmt.Println("\nWaiting for writeData to finish...")
-		quitNow = true
-		validatePool.Close()
+		quitNow.Set()
 		fmt.Println("Data flushed! Cleaning up")
 	}()
 }
@@ -157,7 +158,7 @@ func getNonceCount() {
 }
 
 func incrementNonceCt(nonceCount int) {
-	if db != nil && !quitNow {
+	if db != nil && !quitNow.IsSet() {
 		strKey := "nonceCount"
 		strVal := strconv.Itoa(nonceCount)
 		err := db.WriteString(strKey, strVal)
