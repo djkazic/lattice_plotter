@@ -70,7 +70,7 @@ func computeNode(root []byte) {
 	hmLen = hashMap.Len()
 	if hmLen < totalNodes {
 		// Block until children node hashes calculated
-		childHashes := calcChildren(root, &leftHash, &rightHash)
+		childHashes := calcChildren(&root, &leftHash, &rightHash)
 
 		// Store children hashes in hashMap
 		hashMap.Set(rootHash[:32], childHashes)
@@ -81,7 +81,7 @@ func computeNode(root []byte) {
 	}
 }
 
-func calcChildren(rootBytes []byte, leftHash *[]byte, rightHash *[]byte) [][]byte {
+func calcChildren(rootBytes *[]byte, leftHash *[]byte, rightHash *[]byte) [][]byte {
 	var wg sync.WaitGroup
 
 	wg.Add(2)
@@ -92,10 +92,10 @@ func calcChildren(rootBytes []byte, leftHash *[]byte, rightHash *[]byte) [][]byt
 	return [][]byte{*leftHash, *rightHash}
 }
 
-func calcSubNode(rootBytes []byte, input []byte, target *[]byte, wg *sync.WaitGroup) {
+func calcSubNode(rootBytes *[]byte, input []byte, target *[]byte, wg *sync.WaitGroup) {
 	var hashBuf bytes.Buffer
 
-	hashBuf.Write(rootBytes)
+	hashBuf.Write(*rootBytes)
 	hashBuf.Write(input)
 	*target = calcHash(hashBuf.Bytes())
 	hashBuf.Reset()
