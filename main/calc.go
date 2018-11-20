@@ -4,46 +4,51 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/Jeffail/tunny"
 	"strconv"
-	"sync"
 	"time"
 )
 
-func processPlots(nonce int) {
-	var computeWg sync.WaitGroup
-	var concatBuffer bytes.Buffer
+var validatePool = tunny.NewFunc(maxWorkers, validateData)
+var strNonce string
 
-	strNonce := strconv.Itoa(nonce)
+func processPlots(nonce int) {
+	var concatBuffer bytes.Buffer
+	var start time.Time
+	var end time.Duration
+
+	strNonce = strconv.Itoa(nonce)
 	concatBuffer.WriteString(address)
 	concatBuffer.WriteString(strNonce)
 	startingHash := calcHash(concatBuffer.Bytes())
 	concatBuffer.Reset()
 
-	start := time.Now()
-	computeNode(startingHash, &computeWg)    // Populate tree from root
-	computeWg.Wait()
+	start = time.Now()
+	computeNode(startingHash)                // Populate tree from root
 
-	serializeHashes(&hashList, startingHash) // Post process hashMap -> hashList
 	prQueue.Init()                           // Reset processQueue
+	serializeHashes(&hashList, startingHash) // Post process hashMap -> hashList
 
 	if !quitNow {
+		var pdp *ProcessDataParams
+		var wdp *WriteDataParams
+
 		if verifyPlots {
-			// Parallel validate for hashList
+			// Validate for hashList
 			for ind, hash := range hashList {
-				pdp := &ProcessDataParams{ind, hash, nonce}
-				validateData(pdp)
+				pdp = &ProcessDataParams{ind, hash, nonce}
+				validatePool.Process(pdp)
 			}
-			end := time.Since(start)
+			end = time.Since(start)
 			if quitNow { return }
 			fmt.Printf("Nonce %s verified in %s\n", strNonce, end)
 		} else {
-			if quitNow { return }
-			// Parallel write for hashList
+			// Write for hashList
 			for ind, hash := range hashList {
-				pdp := &ProcessDataParams{ind, hash, nonce}
-				writeData(pdp)
+				wdp = &WriteDataParams{ind, hash, nonce}
+				writeData(wdp)
 			}
-			end := time.Since(start)
+			end = time.Since(start)
 			if quitNow { return }
 			fmt.Printf("Nonce %s timing: %s\n", strNonce, end)
 		}
@@ -58,67 +63,59 @@ func processPlots(nonce int) {
 	hashList = hashList[:0]
 }
 
-func computeNode(root []byte, computeWg *sync.WaitGroup) {
-	var hashBuf bytes.Buffer
-
+func computeNode(root []byte) {
 	// 12 layers under root = 4095 nodes
-	hashMut.Lock()
-	if len(hashMap) < totalNodes {
-		var childrenCalcWg sync.WaitGroup
-		var leftHash []byte
-		var rightHash []byte
-		var rootHash = string(root)
+	var hmLen int
+	var leftHash, rightHash []byte
+	var rootHash = hex.EncodeToString(root)
 
-		childrenCalcWg.Add(1)
-		calcChildren(root, &hashBuf, &leftHash, &rightHash, &childrenCalcWg)
-		childrenCalcWg.Wait()
+	hashMut.RLock()
+	hmLen = len(hashMap)
+	hashMut.RUnlock()
 
-		// Store children in hashMap
-		hashMap[rootHash] = [][]byte{leftHash, rightHash}
+	if hmLen < totalNodes {
+		// Block until children node hashes calculated
+		childHashes := calcChildren(root, &leftHash, &rightHash)
+
+		// Store children hashes in hashMap
+		hashMut.Lock()
+		hashMap[rootHash] = childHashes
 		hashMut.Unlock()
 
-		// Spawn goroutines for calculating left and right children
-		computeWg.Add(2)
-		go runCompute(leftHash, computeWg)
-		go runCompute(rightHash, computeWg)
-	} else {
-		hashMut.Unlock()
+		// Compute sub-nodes for left and right children
+		computeNode(leftHash)
+		computeNode(rightHash)
 	}
 }
 
-func calcChildren(rootBytes []byte, hashBuf *bytes.Buffer, leftHash *[]byte, rightHash *[]byte, wg *sync.WaitGroup) {
-	// Calculate left node hash
+func calcChildren(rootBytes []byte, leftHash *[]byte, rightHash *[]byte) [][]byte {
+	var hashBuf bytes.Buffer
+
 	hashBuf.Write(rootBytes)
 	hashBuf.Write(zeroStrBytes)
 	*leftHash = calcHash(hashBuf.Bytes())
 	hashBuf.Reset()
-
-	// Calculate right node hash
 	hashBuf.Write(rootBytes)
 	hashBuf.Write(oneStrBytes)
 	*rightHash = calcHash(hashBuf.Bytes())
 	hashBuf.Reset()
-	wg.Done()
-}
 
-func runCompute(root []byte, computeWg *sync.WaitGroup) {
-	computeNode(root, computeWg)
-	computeWg.Done()
+	return [][]byte{*leftHash, *rightHash}
 }
 
 func serializeHashes(hashList *[]string, currHash []byte) {
 	currHashStr := hex.EncodeToString(currHash)
 	*hashList = append(*hashList, currHashStr)
-	hashMut.Lock()
-	if val, ok := hashMap[currHashStr]; ok {
+	hashMut.RLock()
+	val, ok := hashMap[currHashStr]
+	hashMut.RUnlock()
+
+	if ok {
+		hashMut.Lock()
 		delete(hashMap, currHashStr)
 		hashMut.Unlock()
-		val0Str := hex.EncodeToString(val[0])
-		val1Str := hex.EncodeToString(val[1])
-		prQueue.PushBack(val0Str)
-		prQueue.PushBack(val1Str)
-	} else {
-		hashMut.Unlock()
+		prQueue.PushBack(val[0])
+		prQueue.PushBack(val[1])
 	}
 	for len(*hashList) < totalNodes && prQueue.Len() > 0 {
 		head := prQueue.PopFront().([]byte)

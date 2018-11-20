@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	fmt.Println("Starting lattice plotter v0.7")
+	fmt.Println("Starting lattice plotter v0.9.7")
 
 	initMaps()          // Initialize handler map and output map
 	warmCache()         // Setup lookup table
@@ -18,11 +18,10 @@ func main() {
 	numPlotsToMake := int64(2147483647)
 	endNumPlots := int(numPlotsToMake)
 
-	checkBaseDir()      // Check status of our base directory
+	checkBaseDir()      // Check status of base directory
 	openDB()			// Badger setup
 	getNonceCount()     // Get nonceCount
 
-	// Attempt calculation of plots to disk / verify
 	start := time.Now()
 	if verifyPlots {
 		endNumPlots = numExistingPlots

@@ -11,17 +11,18 @@ func writeData(payload interface{}) interface{} {
 	var buffer bytes.Buffer
 
 	if db != nil && !quitNow {
-		pdp := payload.(*ProcessDataParams)
+		pdp := payload.(*WriteDataParams)
 		ind := pdp.ind
 		hash := pdp.hash
 		nonce := pdp.nonce
+
 		segment := cachedPrefixLookup(ind)
 		strNonce := strconv.Itoa(nonce)
 		strBucket := strNonce[:1]
 		buffer.WriteString(segment)
-		buffer.WriteString("/")
+		buffer.Write(slashBytes)
 		buffer.WriteString(strBucket)
-		buffer.WriteString("/")
+		buffer.Write(slashBytes)
 		buffer.WriteString(strNonce)
 		strKey := buffer.String()
 		buffer.Reset()
@@ -36,34 +37,37 @@ func writeData(payload interface{}) interface{} {
 
 func validateData(payload interface{}) interface{} {
 	var buffer bytes.Buffer
-	if db != nil && !quitNow {
 
+	if db != nil && !quitNow {
 		pdp := payload.(*ProcessDataParams)
 		ind := pdp.ind
 		hash := pdp.hash
 		nonce := pdp.nonce
+
 		segment := cachedPrefixLookup(ind)
 		strNonce := strconv.Itoa(nonce)
 		strBucket := strNonce[:1]
 		buffer.WriteString(segment)
-		buffer.WriteString("/")
+		buffer.Write(slashBytes)
 		buffer.WriteString(strBucket)
-		buffer.WriteString("/")
+		buffer.Write(slashBytes)
 		buffer.WriteString(strNonce)
 		strKey := buffer.String()
 		buffer.Reset()
-		val := db.ReadString(strKey)
-		if val == "" {
+
+		val, err := db.Read(strKey)
+		if err != nil {
 			fmt.Printf("Error getting key %s\n", strKey)
-			// TODO: better quit than os.Exit
-			os.Exit(1)
+			panic(err)
 		} else {
-			if val != hash {
+			strVal := string(val)
+			if strVal != hash {
 				quitNow = true
 				fmt.Printf("Error detected on line %d of bucket %s!\n", nonce+1, strKey)
-				fmt.Printf("actual: %s\n", val)
+				fmt.Printf("actual: %s\n", strVal)
 				fmt.Printf("wanted: %s\n", hash)
 				fmt.Printf("index: %d\n", ind)
+				os.Exit(1)
 			}
 		}
 	}

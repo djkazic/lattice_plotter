@@ -16,6 +16,12 @@ import (
 	"syscall"
 )
 
+type WriteDataParams struct {
+	ind   int
+	hash  string
+	nonce int
+}
+
 type ProcessDataParams struct {
 	ind   int
 	hash  string
@@ -35,6 +41,7 @@ var (
 	startPoint       int
 	zeroStrBytes     = []byte("0")
 	oneStrBytes      = []byte("1")
+	slashBytes 		 = []byte("/")
 )
 
 var (
@@ -45,12 +52,15 @@ var (
 
 var (
 	db       *diskv.Diskv
-	hashMut  sync.Mutex
+
+	hashMut  sync.RWMutex
 	hashMap  map[string][][]byte
 	indMut   sync.Mutex
 	indMap   map[int]string
+
 	hashList []string
 	prQueue  queue.Queue
+	maxWorkers = runtime.NumCPU()
 )
 
 func initMaps() {
@@ -74,6 +84,7 @@ func setupGracefulStop() {
 		<-gracefulStop
 		fmt.Println("\nWaiting for writeData to finish...")
 		quitNow = true
+		validatePool.Close()
 		fmt.Println("Data flushed! Cleaning up")
 	}()
 }
@@ -95,7 +106,7 @@ func cachedPrefixLookup(ind int) string {
 }
 
 func calcHash(input []byte) []byte {
-	hash, err := argon2.Key(input, input, 1, 2, 4096, 32)
+	hash, err := argon2.Key(input, input, 1, 2, 1024, 32)
 	if err != nil {
 		fmt.Printf("Error processing hash for input %x\n", input)
 		panic(err)
