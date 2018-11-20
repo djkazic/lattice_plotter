@@ -57,7 +57,7 @@ var (
 	hashMut  sync.RWMutex
 	hashMap  map[string][][]byte
 	indMut   sync.Mutex
-	indMap   map[int]string
+	indTable []string
 
 	hashList []string
 	prQueue  queue.Queue
@@ -66,15 +66,17 @@ var (
 
 func initMaps() {
 	hashMap = make(map[string][][]byte)
-	indMap = make(map[int]string)
 }
 
 func warmCache() {
+	// Allocate indTable
+	for i := 0; i < 4096; i++ {
+		indTable = append(indTable, "")
+	}
+	// Fill indTable
 	for i := 0; i < 4096; i++ {
 		strPrefix := fmt.Sprintf("%04d", i)
-		indMut.Lock()
-		indMap[i] = strPrefix
-		indMut.Unlock()
+		indTable[i] = strPrefix
 	}
 }
 
@@ -93,10 +95,10 @@ func setupGracefulStop() {
 func cachedPrefixLookup(ind int) string {
 	var prefix string
 
-	if val, ok := indMap[ind]; !ok {
+	if val := indTable[ind]; val == "" {
 		cacheVal := fmt.Sprintf("%04d", ind)
 		indMut.Lock()
-		indMap[ind] = cacheVal
+		indTable[ind] = cacheVal
 		indMut.Unlock()
 		prefix = cacheVal
 	} else {
