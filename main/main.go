@@ -20,8 +20,7 @@ func main() {
 	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
 		os.MkdirAll(baseDir, 0755)
 	}
-	numPlotsToMake := int64(2147483647)
-	endNumPlots := int(numPlotsToMake)
+	endNumPlots := 2147483647
 
 	checkBaseDir()      // Check status of base directory
 	openDB()			// Badger setup

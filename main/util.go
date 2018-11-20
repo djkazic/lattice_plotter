@@ -15,6 +15,7 @@ import (
 	"sync"
 	"syscall"
 	"github.com/mr-tron/base58"
+	"github.com/cornelk/hashmap"
 )
 
 type WriteDataParams struct {
@@ -54,8 +55,7 @@ var (
 var (
 	db       *diskv.Diskv
 
-	hashMut  sync.RWMutex
-	hashMap  map[string][][]byte
+	hashMap  *hashmap.HashMap
 	indMut   sync.Mutex
 	indTable []string
 
@@ -65,7 +65,7 @@ var (
 )
 
 func initMaps() {
-	hashMap = make(map[string][][]byte)
+	hashMap = &hashmap.HashMap{}
 }
 
 func warmCache() {

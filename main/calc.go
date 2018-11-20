@@ -66,18 +66,14 @@ func computeNode(root []byte) {
 	var leftHash, rightHash []byte
 	var rootHash = hex.EncodeToString(root)
 
-	hashMut.RLock()
-	hmLen = len(hashMap)
-	hashMut.RUnlock()
+	hmLen = hashMap.Len()
 
 	if hmLen < totalNodes {
 		// Block until children node hashes calculated
 		childHashes := calcChildren(root, &leftHash, &rightHash)
 
 		// Store children hashes in hashMap
-		hashMut.Lock()
-		hashMap[rootHash] = childHashes
-		hashMut.Unlock()
+		hashMap.Set(rootHash[:16], childHashes)
 
 		// Compute sub-nodes for left and right children
 		computeNode(leftHash)
@@ -103,16 +99,13 @@ func calcChildren(rootBytes []byte, leftHash *[]byte, rightHash *[]byte) [][]byt
 func serializeHashes(hashList *[]string, currHash []byte) {
 	currHashStr := hex.EncodeToString(currHash)
 	*hashList = append(*hashList, currHashStr)
-	hashMut.RLock()
-	val, ok := hashMap[currHashStr]
-	hashMut.RUnlock()
+	tmp, ok := hashMap.Get(currHashStr[:16])
 
-	if ok {
-		hashMut.Lock()
-		delete(hashMap, currHashStr)
-		hashMut.Unlock()
+	if ok && tmp != nil {
+		val := tmp.([][]byte)
 		prQueue.PushBack(val[0])
 		prQueue.PushBack(val[1])
+		hashMap.Del(currHashStr[:16])
 	}
 	for len(*hashList) < totalNodes && prQueue.Len() > 0 {
 		head := prQueue.PopFront().([]byte)
