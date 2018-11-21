@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strconv"
-	"time"
 	"sync"
+	"time"
 )
 
 func processPlots(nonce int) {
@@ -84,18 +84,18 @@ func calcChildren(rootBytes *[]byte, leftHash *[]byte, rightHash *[]byte) [][]by
 	var wg sync.WaitGroup
 
 	wg.Add(2)
-	go calcSubNode(rootBytes, zeroStrBytes, leftHash, &wg)
-	go calcSubNode(rootBytes, oneStrBytes, rightHash, &wg)
+	go calcSubNode(rootBytes, &zeroStrBytes, leftHash, &wg)
+	go calcSubNode(rootBytes, &oneStrBytes, rightHash, &wg)
 	wg.Wait()
 
 	return [][]byte{*leftHash, *rightHash}
 }
 
-func calcSubNode(rootBytes *[]byte, input []byte, target *[]byte, wg *sync.WaitGroup) {
+func calcSubNode(rootBytes *[]byte, input *[]byte, target *[]byte, wg *sync.WaitGroup) {
 	var hashBuf bytes.Buffer
 
 	hashBuf.Write(*rootBytes)
-	hashBuf.Write(input)
+	hashBuf.Write(*input)
 	*target = calcHash(hashBuf.Bytes())
 	hashBuf.Reset()
 	wg.Done()
