@@ -17,7 +17,7 @@ func processPlots(nonce int) {
 	var start time.Time
 	var end time.Duration
 
-	var pdp *ProcessDataParams
+	var pdp *ReadDataParams
 	var wdp *WriteDataParams
 
 	strNonce = strconv.Itoa(nonce)
@@ -36,7 +36,7 @@ func processPlots(nonce int) {
 		if verifyPlots {
 			// Validate for hashList
 			for ind := range hashList {
-				pdp = &ProcessDataParams{ind, hashList[ind], nonce}
+				pdp = &ReadDataParams{ind, &hashList[ind], nonce}
 				validateData(pdp)
 			}
 			end = time.Since(start)
@@ -44,7 +44,7 @@ func processPlots(nonce int) {
 		} else {
 			// Write for hashList
 			for ind := range hashList {
-				wdp = &WriteDataParams{ind, hashList[ind], nonce}
+				wdp = &WriteDataParams{ind, &hashList[ind], nonce}
 				writeData(wdp)
 			}
 			end = time.Since(start)
@@ -63,11 +63,10 @@ func processPlots(nonce int) {
 
 func computeNode(root []byte) {
 	// 12 layers under root = 4095 nodes
-	var hmLen int
 	var leftHash, rightHash []byte
 	var rootHash = hex.EncodeToString(root)
 
-	hmLen = hashMap.Len()
+	hmLen := hashMap.Len()
 	if hmLen < totalNodes {
 		// Block until children node hashes calculated
 		childHashes := calcChildren(&root, &leftHash, &rightHash)

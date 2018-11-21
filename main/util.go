@@ -20,13 +20,13 @@ import (
 
 type WriteDataParams struct {
 	ind   int
-	hash  string
+	hash  *string
 	nonce int
 }
 
-type ProcessDataParams struct {
+type ReadDataParams struct {
 	ind   int
-	hash  string
+	hash  *string
 	nonce int
 }
 

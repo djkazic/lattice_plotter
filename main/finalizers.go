@@ -13,12 +13,16 @@ func writeData(payload interface{}) interface{} {
 	if db != nil {
 		pdp := payload.(*WriteDataParams)
 		ind := pdp.ind
-		hash := pdp.hash
+		hash := *pdp.hash
 		nonce := pdp.nonce
 
 		segment := cachedPrefixLookup(ind)
 		strNonce := strconv.Itoa(nonce)
-		strBucket := strNonce[:1]
+		endInd := len(strNonce) - 1
+		if endInd <= 0 {
+			endInd = 1
+		}
+		strBucket := strNonce[:endInd]
 		buffer.WriteString(segment)
 		buffer.Write(slashBytes)
 		buffer.WriteString(strBucket)
@@ -39,14 +43,18 @@ func validateData(payload interface{}) interface{} {
 	var buffer bytes.Buffer
 
 	if db != nil {
-		pdp := payload.(*ProcessDataParams)
+		pdp := payload.(*ReadDataParams)
 		ind := pdp.ind
-		hash := pdp.hash
+		hash := *pdp.hash
 		nonce := pdp.nonce
 
 		segment := cachedPrefixLookup(ind)
 		strNonce := strconv.Itoa(nonce)
-		strBucket := strNonce[:1]
+		endInd := len(strNonce) - 1
+		if endInd <= 0 {
+			endInd = 1
+		}
+		strBucket := strNonce[:endInd]
 		buffer.WriteString(segment)
 		buffer.Write(slashBytes)
 		buffer.WriteString(strBucket)
