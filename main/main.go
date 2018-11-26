@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 	"time"
+	"runtime/pprof"
 )
 
 func main() {
@@ -49,6 +50,7 @@ func main() {
 		processPlots(i)
 	}
 	end := time.Since(start)
+	pprof.StopCPUProfile()
 	fmt.Printf("Plotter runtime: %s\n", end)
 }
 

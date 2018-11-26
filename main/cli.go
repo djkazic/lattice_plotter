@@ -4,21 +4,26 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"log"
+	"runtime/pprof"
 )
 
 func parseFlags() {
 	startCmd := flag.NewFlagSet("mine", flag.ExitOnError)
 	parsedAddress := startCmd.String("address", "", "Address to generate plots for")
 	mineStart := startCmd.Int("start", -1, "Line number in plot to start")
+
 	verifyCmd := flag.NewFlagSet("verify", flag.ExitOnError)
 	verifyAddress := verifyCmd.String("address", "", "Address to verify plots with")
 	verifyStart := verifyCmd.Int("start", -1, "Line number in plot to start verify")
+	cpuProfile := verifyCmd.String("cpuprofile", "", "Write cpu profile to file")
 
 	argsNeeded := 4
 	if len(os.Args) < argsNeeded {
 		printUsage()
 		return
 	}
+
 	verifyPlots = os.Args[1] == "verify"
 	if !verifyPlots {
 		err := startCmd.Parse(os.Args[2:])
@@ -57,6 +62,15 @@ func parseFlags() {
 				// Print out start point + 1 so end-user don't see nonceNum
 				fmt.Printf("Verify start point set to nonce %d\n", startPoint)
 			}
+		}
+
+		// Profiling setup
+		if *cpuProfile != "" {
+			f, err := os.Create(*cpuProfile)
+			if err != nil {
+				log.Fatal(err)
+			}
+			pprof.StartCPUProfile(f)
 		}
 	}
 	if !validateAddress(address) {

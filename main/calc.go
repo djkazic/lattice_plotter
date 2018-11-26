@@ -1,152 +1,139 @@
 package main
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/valyala/bytebufferpool"
+	"github.com/ivpusic/grpool"
+	"github.com/orcaman/concurrent-map"
+	"github.com/phf/go-queue/queue"
+	"runtime"
 	"strconv"
-	"sync"
+	"strings"
 	"time"
+)
+
+var (
+	plotStart time.Time
+	plotEnd time.Duration
+
+	hashMap  cmap.ConcurrentMap
+	indTable [4096]string
+	subPool = grpool.NewPool(runtime.NumCPU() * 8, runtime.NumCPU())
 )
 
 func processPlots(nonce int) {
 	var (
-		strNonce string
-		concatBuffer bytes.Buffer
-		start time.Time
-		end time.Duration
-		pdp *ReadDataParams
-		wdp *WriteDataParams
-		leftChild, rightChild []byte
+		wdp WriteDataParams
+		joinList []string
+		hashList []string
+		childQueue queue.Queue
+		prQueue    queue.Queue
 	)
 
 	// Calculate this nonce's starting hash
-	strNonce = strconv.Itoa(nonce)
-	concatBuffer.WriteString(address)
-	concatBuffer.WriteString(strNonce)
-	startingHash := calcHash(concatBuffer.Bytes())
-	concatBuffer.Reset()
-
-	start = time.Now()
+	strNonce := strconv.Itoa(nonce)
+	joinList = append(joinList, address)
+	joinList = append(joinList, strNonce)
+	concatStr := strings.Join(joinList, "")
+	concatBytes := []byte(concatStr)
+	plotStart = time.Now()
+	startingHash := calcHash(concatBytes)
+	concatBytes = nil
 
 	// Populate tree from root
 	childQueue.Init()
 	childQueue.PushBack(startingHash)
-	quitComputeLoop := false
 
 	// Iterative approach instead of recursive: we save on memory overhead
-	for !quitComputeLoop {
-		computeInput := childQueue.PopFront().([]byte)
-		leftChild, rightChild, quitComputeLoop = computeNode(computeInput)
-		if quitComputeLoop {
-			break
-		}
-		childQueue.PushBack(leftChild)
-		childQueue.PushBack(rightChild)
+	for hashMap.Count() < totalNodes {
+		computeNode(&childQueue)
 	}
 
-	prQueue.Init()                           // Reset processQueue
-	serializeHashes(&hashList, startingHash) // Post process hashMap -> hashList
+	prQueue.Init()
+	serializeHashes(&prQueue, &hashList, startingHash) // Post process hashMap -> hashList
 
 	if !quitNow.IsSet() {
 		if verifyPlots {
 			// Validate for hashList
 			for ind := range hashList {
-				pdp = &ReadDataParams{ind, &hashList[ind], nonce}
-				validateData(pdp)
+				validateData(ind, nonce, &hashList)
 			}
-			end = time.Since(start)
-			fmt.Printf("Nonce %s verified in %s\n", strNonce, end)
+			plotEnd = time.Since(plotStart)
+			fmt.Printf("Nonce %s verified in %s\n", strNonce, plotEnd)
 		} else {
 			// Write for hashList
 			for ind := range hashList {
-				wdp = &WriteDataParams{ind, &hashList[ind], nonce}
+				wdp = WriteDataParams{ind, hashList[ind], nonce}
 				writeData(wdp)
 			}
-			end = time.Since(start)
-			fmt.Printf("Nonce %s timing: %s\n", strNonce, end)
+			plotEnd = time.Since(plotStart)
+			fmt.Printf("Nonce %s timing: %s\n", strNonce, plotEnd)
 		}
 	}
+
+	// Clear hashList slice
+	hashList = nil
 
 	// If plot count exceeds shortestLen, update counter
 	if !verifyPlots && nonce > shortestLen {
 		incrementNonceCt(nonce)
 	}
-
-	// Empty hashList slice
-	hashList = hashList[:0]
 }
 
-func computeNode(root []byte) ([]byte, []byte, bool) {
+func computeNode(chpQueue *queue.Queue) {
 	// 12 layers under root = 4095 nodes
-	var rootHash = hex.EncodeToString(root)
 	var leftHash, rightHash []byte
-	var childWg sync.WaitGroup
 
-	if hashMap.Len() < totalNodes {
+	if hashMap.Count() < totalNodes {
+		root := chpQueue.PopFront().([]byte)
+
 		// Block until children node hashes calculated
-		ccp := &CalcChildParams{&root, &leftHash, &rightHash, &childWg}
-		childPool.Process(ccp)
+		calcChildren(root, &leftHash, &rightHash)
 
 		// Store children hashes in hashMap
 		childHashes := [][]byte{leftHash, rightHash}
-		hashMap.Set(rootHash, childHashes)
+		rootStr := hex.EncodeToString(root)
+		hashMap.Set(rootStr, childHashes)
 
 		// Return sub-nodes for processing
-		return leftHash, rightHash, false
+		chpQueue.PushBack(leftHash)
+		chpQueue.PushBack(rightHash)
 	}
-	// Return quit flag as true
-	return nil, nil, true
 }
 
-func calcChildren(payload interface{}) interface{} {
-	var rootPtr *[]byte
-	var leftHashPtr, rightHashPtr *[]byte
-	var childWg sync.WaitGroup
-
-	ccp := payload.(*CalcChildParams)
-	rootPtr = ccp.rootPtr
-	leftHashPtr = ccp.leftHash
-	rightHashPtr = ccp.rightHash
-
-	childWg.Add(2)
-	go calcSubNode(rootPtr, &zeroStrBytes, leftHashPtr, &childWg)
-	go calcSubNode(rootPtr, &oneStrBytes, rightHashPtr, &childWg)
-	childWg.Wait()
-
-	return nil
+func calcChildren(root []byte, leftHash *[]byte, rightHash *[]byte) {
+	subPool.WaitCount(2)
+	subPool.JobQueue <- func() {
+		calcSubNode(root, zeroStrBytes, leftHash)
+		subPool.JobDone()
+	}
+	subPool.JobQueue <- func() {
+		calcSubNode(root, oneStrBytes, rightHash)
+		subPool.JobDone()
+	}
+	subPool.WaitAll()
 }
 
-func calcSubNode(rootPtr *[]byte, instruction *[]byte, target *[]byte, wg *sync.WaitGroup) {
-	inputBuf := bytebufferpool.Get()
-	_, err := inputBuf.Write(*rootPtr)
-	if err != nil {
-		fmt.Printf("error: calcSubNode first buffer write failed! %v\n", err)
-	}
-	_, err = inputBuf.Write(*instruction)
-	if err != nil {
-		fmt.Printf("error: calcSubNode second buffer write failed! %v\n", err)
-	}
-	*target = calcHash(inputBuf.B)
-	// inputBuf.Reset()
-	bytebufferpool.Put(inputBuf)
-	wg.Done()
+func calcSubNode(root []byte, instruct []byte, target *[]byte) {
+	var inputBytes [33]byte
+
+	copy(inputBytes[:32], root)
+	copy(inputBytes[32:], instruct)
+	*target = calcHash(inputBytes[:])
 }
 
-func serializeHashes(hashList *[]string, currHash []byte) {
+func serializeHashes(prQueue *queue.Queue, hashList *[]string, currHash []byte) {
 	currHashStr := hex.EncodeToString(currHash)
 	*hashList = append(*hashList, currHashStr)
 	tmp, ok := hashMap.Get(currHashStr)
-
 	if ok && tmp != nil {
 		val := tmp.([][]byte)
 		prQueue.PushBack(val[0])
 		prQueue.PushBack(val[1])
-		hashMap.Del(currHashStr)
+		hashMap.Remove(currHashStr)
 	}
-	for len(*hashList) < totalNodes && prQueue.Len() > 0 {
+	for prQueue.Len() > 0 && len(*hashList) < totalNodes {
 		head := prQueue.PopFront().([]byte)
-		serializeHashes(hashList, head)
+		serializeHashes(prQueue, hashList, head)
 	}
 }
