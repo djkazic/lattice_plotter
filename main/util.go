@@ -4,39 +4,18 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
-	"github.com/Jeffail/tunny"
-	"github.com/cornelk/hashmap"
-	"github.com/magical/argon2"
 	"github.com/mr-tron/base58"
+	"github.com/orcaman/concurrent-map"
 	"github.com/peterbourgon/diskv"
-	"github.com/phf/go-queue/queue"
 	"github.com/tevino/abool"
+	"golang.org/x/crypto/argon2"
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/pprof"
 	"strconv"
-	"sync"
 	"syscall"
 )
-
-type CalcChildParams struct {
-	rootPtr   *[]byte
-	leftHash  *[]byte
-	rightHash *[]byte
-	childWg   *sync.WaitGroup
-}
-
-type WriteDataParams struct {
-	ind   int
-	hash  *string
-	nonce int
-}
-
-type ReadDataParams struct {
-	ind   int
-	hash  *string
-	nonce int
-}
 
 const (
 	totalNodes = 4095
@@ -51,7 +30,7 @@ var (
 	startPoint       int
 	zeroStrBytes     = []byte("0")
 	oneStrBytes      = []byte("1")
-	slashBytes 		 = []byte("/")
+	profiling = false
 )
 
 var (
@@ -62,27 +41,17 @@ var (
 
 var (
 	db       *diskv.Diskv
-
-	hashMap  *hashmap.HashMap
-	indMut   sync.Mutex
-	indTable []string
-
-	hashList []string
-	childQueue queue.Queue
-	prQueue  queue.Queue
-
 	maxWorkers int
-	childPool = tunny.NewFunc(runtime.NumCPU(), calcChildren)
 )
 
 func initMaps() {
-	hashMap = &hashmap.HashMap{}
+	hashMap = cmap.New()
 }
 
 func warmCache() {
 	// Allocate + fill indTable
 	for i := 0; i < 4096; i++ {
-		indTable = append(indTable, fmt.Sprintf("%04d", i))
+		indTable[i] = fmt.Sprintf("%04d", i)
 	}
 }
 
@@ -94,6 +63,9 @@ func setupGracefulStop() {
 		<-gracefulStop
 		fmt.Println("\nWaiting for writeData to finish...")
 		quitNow.Set()
+		if profiling {
+			pprof.StopCPUProfile()
+		}
 		fmt.Println("Data flushed! Cleaning up")
 	}()
 }
@@ -103,9 +75,7 @@ func cachedPrefixLookup(ind int) string {
 
 	if val := indTable[ind]; val == "" {
 		cacheVal := fmt.Sprintf("%04d", ind)
-		indMut.Lock()
 		indTable[ind] = cacheVal
-		indMut.Unlock()
 		prefix = cacheVal
 	} else {
 		prefix = val
@@ -115,12 +85,7 @@ func cachedPrefixLookup(ind int) string {
 }
 
 func calcHash(input []byte) []byte {
-	hash, err := argon2.Key(input, input, 1, 2, 1024, 32)
-	if err != nil {
-		fmt.Printf("Error processing hash for input %x\n", input)
-		panic(err)
-	}
-	return hash
+	return argon2.Key(input, input, 1, 1024, 2, 32)
 }
 
 func checkBaseDir() {

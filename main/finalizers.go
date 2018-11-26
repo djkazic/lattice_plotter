@@ -3,19 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/valyala/bytebufferpool"
 	"os"
 	"strconv"
 	"strings"
 )
 
-func writeData(payload interface{}) interface{} {
+func writeData(ind int, nonce int, hashList *[]string) {
 	if db != nil {
-		pdp := payload.(*WriteDataParams)
-		ind := pdp.ind
-		hash := *pdp.hash
-		nonce := pdp.nonce
-
 		segment := cachedPrefixLookup(ind)
 		strNonce := strconv.Itoa(nonce)
 		strKey, slot := calcKVPlacement(strNonce, segment)
@@ -27,7 +21,7 @@ func writeData(payload interface{}) interface{} {
 				readSplit = append(readSplit, "")
 			}
 		}
-		readSplit[slot] = hash
+		readSplit[slot] = (*hashList)[ind]
 		readStr := strings.Join(readSplit, "\n")
 		err := db.WriteString(strKey, readStr)
 		if err != nil {
@@ -35,16 +29,10 @@ func writeData(payload interface{}) interface{} {
 			panic(err)
 		}
 	}
-	return nil
 }
 
-func validateData(payload interface{}) interface{} {
+func validateData(ind int, nonce int, hashList *[]string) {
 	if db != nil {
-		pdp := payload.(*ReadDataParams)
-		ind := pdp.ind
-		hash := *pdp.hash
-		nonce := pdp.nonce
-
 		segment := cachedPrefixLookup(ind)
 		strNonce := strconv.Itoa(nonce)
 		strKey, slot := calcKVPlacement(strNonce, segment)
@@ -55,6 +43,7 @@ func validateData(payload interface{}) interface{} {
 			panic(err)
 		}
 		strVal := readSplit[slot]
+		hash := (*hashList)[ind]
 		if strVal != hash {
 			quitNow.Set()
 			fmt.Printf("Error detected on line %d of bucket %s!\n", nonce+1, strKey)
@@ -64,48 +53,31 @@ func validateData(payload interface{}) interface{} {
 			os.Exit(1)
 		}
 	}
-	return nil
 }
 
 func calcKVPlacement(strNonce, segment string) (string, int) {
-	var res string
-	buffer := bytebufferpool.Get()
+	var joinList []string
 
 	endInd := len(strNonce) - 1
 	if endInd <= 0 {
 		endInd = 1
 	}
 	strBucket := strNonce[:endInd]
-
-	_, err := buffer.WriteString(segment)
-	if err != nil {
-		fmt.Printf("error: calcKV first buffer write failed! %v\n", err)
-	}
-	_, err = buffer.Write(slashBytes)
-	if err != nil {
-		fmt.Printf("error: calcKV second buffer write failed! %v\n", err)
-	}
+	joinList = append(joinList, segment)
+	joinList = append(joinList, "/")
 	lastChar := strNonce[endInd:]
 	if len(strNonce) <= 1 {
 		lastChar = strNonce
-		_, err = buffer.Write(zeroStrBytes)
-		if err != nil {
-			fmt.Printf("error: calcKV final buffer write failed! %v\n", err)
-		}
+		joinList = append(joinList, "0")
 	} else {
-		_, err = buffer.WriteString(strBucket)
-		if err != nil {
-			fmt.Printf("error: calcKV final buffer write failed! %v\n", err)
-		}
+		joinList = append(joinList, strBucket)
 	}
 	slot, err := strconv.Atoi(lastChar)
 	if err != nil {
 		fmt.Println("Cannot parse slot for db insert")
 		panic(err)
 	}
-	res = buffer.String()
-	buffer.Reset()
-	bytebufferpool.Put(buffer)
+	res := strings.Join(joinList, "")
 
 	return res, slot
 }
