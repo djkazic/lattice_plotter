@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"github.com/Jeffail/tunny"
+	"github.com/cornelk/hashmap"
 	"github.com/magical/argon2"
+	"github.com/mr-tron/base58"
 	"github.com/peterbourgon/diskv"
 	"github.com/phf/go-queue/queue"
 	"github.com/tevino/abool"
@@ -14,9 +17,14 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
-	"github.com/mr-tron/base58"
-	"github.com/cornelk/hashmap"
 )
+
+type CalcChildParams struct {
+	rootPtr   *[]byte
+	leftHash  *[]byte
+	rightHash *[]byte
+	childWg   *sync.WaitGroup
+}
 
 type WriteDataParams struct {
 	ind   int
@@ -60,8 +68,11 @@ var (
 	indTable []string
 
 	hashList []string
+	childQueue queue.Queue
 	prQueue  queue.Queue
+
 	maxWorkers int
+	childPool = tunny.NewFunc(runtime.NumCPU(), calcChildren)
 )
 
 func initMaps() {

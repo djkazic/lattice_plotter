@@ -1,10 +1,11 @@
 package main
 
 import (
+	// "encoding/hex"
 	"fmt"
-	"time"
-	"runtime"
 	"os"
+	"runtime"
+	"time"
 )
 
 func main() {
@@ -18,7 +19,7 @@ func main() {
 	fmt.Printf("Address set: %s\n", address)
 	baseDir = fmt.Sprintf(baseDir, address)
 	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
-		os.MkdirAll(baseDir, 0755)
+		err = os.MkdirAll(baseDir, 0755)
 	}
 	endNumPlots := 2147483647
 

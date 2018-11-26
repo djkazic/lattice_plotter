@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
+	"github.com/valyala/bytebufferpool"
 	"os"
 	"strconv"
 	"strings"
@@ -68,8 +68,8 @@ func validateData(payload interface{}) interface{} {
 }
 
 func calcKVPlacement(strNonce, segment string) (string, int) {
-	var buffer bytes.Buffer
 	var res string
+	buffer := bytebufferpool.Get()
 
 	endInd := len(strNonce) - 1
 	if endInd <= 0 {
@@ -77,14 +77,26 @@ func calcKVPlacement(strNonce, segment string) (string, int) {
 	}
 	strBucket := strNonce[:endInd]
 
-	buffer.WriteString(segment)
-	buffer.Write(slashBytes)
+	_, err := buffer.WriteString(segment)
+	if err != nil {
+		fmt.Printf("error: calcKV first buffer write failed! %v\n", err)
+	}
+	_, err = buffer.Write(slashBytes)
+	if err != nil {
+		fmt.Printf("error: calcKV second buffer write failed! %v\n", err)
+	}
 	lastChar := strNonce[endInd:]
 	if len(strNonce) <= 1 {
 		lastChar = strNonce
-		buffer.Write(zeroStrBytes)
+		_, err = buffer.Write(zeroStrBytes)
+		if err != nil {
+			fmt.Printf("error: calcKV final buffer write failed! %v\n", err)
+		}
 	} else {
-		buffer.WriteString(strBucket)
+		_, err = buffer.WriteString(strBucket)
+		if err != nil {
+			fmt.Printf("error: calcKV final buffer write failed! %v\n", err)
+		}
 	}
 	slot, err := strconv.Atoi(lastChar)
 	if err != nil {
@@ -93,6 +105,7 @@ func calcKVPlacement(strNonce, segment string) (string, int) {
 	}
 	res = buffer.String()
 	buffer.Reset()
+	bytebufferpool.Put(buffer)
 
 	return res, slot
 }
