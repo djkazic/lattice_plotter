@@ -4,22 +4,24 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/valyala/bytebufferpool"
 	"strconv"
 	"sync"
 	"time"
 )
 
 func processPlots(nonce int) {
-	var strNonce string
+	var (
+		strNonce string
+		concatBuffer bytes.Buffer
+		start time.Time
+		end time.Duration
+		pdp *ReadDataParams
+		wdp *WriteDataParams
+		leftChild, rightChild []byte
+	)
 
-	var concatBuffer bytes.Buffer
-
-	var start time.Time
-	var end time.Duration
-
-	var pdp *ReadDataParams
-	var wdp *WriteDataParams
-
+	// Calculate this nonce's starting hash
 	strNonce = strconv.Itoa(nonce)
 	concatBuffer.WriteString(address)
 	concatBuffer.WriteString(strNonce)
@@ -27,7 +29,22 @@ func processPlots(nonce int) {
 	concatBuffer.Reset()
 
 	start = time.Now()
-	computeNode(startingHash)                // Populate tree from root
+
+	// Populate tree from root
+	childQueue.Init()
+	childQueue.PushBack(startingHash)
+	quitComputeLoop := false
+
+	// Iterative approach instead of recursive: we save on memory overhead
+	for !quitComputeLoop {
+		computeInput := childQueue.PopFront().([]byte)
+		leftChild, rightChild, quitComputeLoop = computeNode(computeInput)
+		if quitComputeLoop {
+			break
+		}
+		childQueue.PushBack(leftChild)
+		childQueue.PushBack(rightChild)
+	}
 
 	prQueue.Init()                           // Reset processQueue
 	serializeHashes(&hashList, startingHash) // Post process hashMap -> hashList
@@ -61,56 +78,72 @@ func processPlots(nonce int) {
 	hashList = hashList[:0]
 }
 
-func computeNode(root []byte) {
+func computeNode(root []byte) ([]byte, []byte, bool) {
 	// 12 layers under root = 4095 nodes
-	var leftHash, rightHash []byte
 	var rootHash = hex.EncodeToString(root)
+	var leftHash, rightHash []byte
+	var childWg sync.WaitGroup
 
-	hmLen := hashMap.Len()
-	if hmLen < totalNodes {
+	if hashMap.Len() < totalNodes {
 		// Block until children node hashes calculated
-		childHashes := calcChildren(&root, &leftHash, &rightHash)
+		ccp := &CalcChildParams{&root, &leftHash, &rightHash, &childWg}
+		childPool.Process(ccp)
 
 		// Store children hashes in hashMap
-		hashMap.Set(rootHash[:32], childHashes)
+		childHashes := [][]byte{leftHash, rightHash}
+		hashMap.Set(rootHash, childHashes)
 
-		// Compute sub-nodes for left and right children
-		computeNode(leftHash)
-		computeNode(rightHash)
+		// Return sub-nodes for processing
+		return leftHash, rightHash, false
 	}
+	// Return quit flag as true
+	return nil, nil, true
 }
 
-func calcChildren(rootBytes *[]byte, leftHash *[]byte, rightHash *[]byte) [][]byte {
-	var wg sync.WaitGroup
+func calcChildren(payload interface{}) interface{} {
+	var rootPtr *[]byte
+	var leftHashPtr, rightHashPtr *[]byte
+	var childWg sync.WaitGroup
 
-	wg.Add(2)
-	go calcSubNode(rootBytes, &zeroStrBytes, leftHash, &wg)
-	go calcSubNode(rootBytes, &oneStrBytes, rightHash, &wg)
-	wg.Wait()
+	ccp := payload.(*CalcChildParams)
+	rootPtr = ccp.rootPtr
+	leftHashPtr = ccp.leftHash
+	rightHashPtr = ccp.rightHash
 
-	return [][]byte{*leftHash, *rightHash}
+	childWg.Add(2)
+	go calcSubNode(rootPtr, &zeroStrBytes, leftHashPtr, &childWg)
+	go calcSubNode(rootPtr, &oneStrBytes, rightHashPtr, &childWg)
+	childWg.Wait()
+
+	return nil
 }
 
-func calcSubNode(rootBytes *[]byte, input *[]byte, target *[]byte, wg *sync.WaitGroup) {
-	var hashBuf bytes.Buffer
-
-	hashBuf.Write(*rootBytes)
-	hashBuf.Write(*input)
-	*target = calcHash(hashBuf.Bytes())
-	hashBuf.Reset()
+func calcSubNode(rootPtr *[]byte, instruction *[]byte, target *[]byte, wg *sync.WaitGroup) {
+	inputBuf := bytebufferpool.Get()
+	_, err := inputBuf.Write(*rootPtr)
+	if err != nil {
+		fmt.Printf("error: calcSubNode first buffer write failed! %v\n", err)
+	}
+	_, err = inputBuf.Write(*instruction)
+	if err != nil {
+		fmt.Printf("error: calcSubNode second buffer write failed! %v\n", err)
+	}
+	*target = calcHash(inputBuf.B)
+	// inputBuf.Reset()
+	bytebufferpool.Put(inputBuf)
 	wg.Done()
 }
 
 func serializeHashes(hashList *[]string, currHash []byte) {
 	currHashStr := hex.EncodeToString(currHash)
 	*hashList = append(*hashList, currHashStr)
-	tmp, ok := hashMap.Get(currHashStr[:32])
+	tmp, ok := hashMap.Get(currHashStr)
 
 	if ok && tmp != nil {
 		val := tmp.([][]byte)
 		prQueue.PushBack(val[0])
 		prQueue.PushBack(val[1])
-		hashMap.Del(currHashStr[:32])
+		hashMap.Del(currHashStr)
 	}
 	for len(*hashList) < totalNodes && prQueue.Len() > 0 {
 		head := prQueue.PopFront().([]byte)
