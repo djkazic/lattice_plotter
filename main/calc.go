@@ -23,21 +23,20 @@ var (
 
 func processPlots(nonce int) {
 	var (
-		joinList []string
-		hashList []string
+		strBuf strings.Builder
+		hashList   []string
 		childQueue queue.Queue
 		prQueue    queue.Queue
 	)
 
 	// Calculate this nonce's starting hash
 	strNonce := strconv.Itoa(nonce)
-	joinList = append(joinList, address)
-	joinList = append(joinList, strNonce)
-	concatStr := strings.Join(joinList, "")
-	concatBytes := []byte(concatStr)
+	strBuf.WriteString(address)
+	strBuf.WriteString(strNonce)
 	plotStart = time.Now()
-	startingHash := calcHash(concatBytes)
-	concatBytes = nil
+	calcBytes := []byte(strBuf.String())
+	startingHash := calcHash(calcBytes)
+	strBuf.Reset()
 
 	// Populate tree from root
 	childQueue.Init()

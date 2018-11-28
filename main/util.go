@@ -30,6 +30,7 @@ var (
 	startPoint       int
 	zeroStrBytes     = []byte("0")
 	oneStrBytes      = []byte("1")
+	slashBytes       = []byte("/")
 	profiling = false
 )
 

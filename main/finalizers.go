@@ -56,28 +56,29 @@ func validateData(ind int, nonce int, hashList *[]string) {
 }
 
 func calcKVPlacement(strNonce, segment string) (string, int) {
-	var joinList []string
+	var strBuf strings.Builder
 
 	endInd := len(strNonce) - 1
 	if endInd <= 0 {
 		endInd = 1
 	}
 	strBucket := strNonce[:endInd]
-	joinList = append(joinList, segment)
-	joinList = append(joinList, "/")
+	strBuf.WriteString(segment)
+	strBuf.Write(slashBytes)
 	lastChar := strNonce[endInd:]
 	if len(strNonce) <= 1 {
 		lastChar = strNonce
-		joinList = append(joinList, "0")
+		strBuf.Write(zeroStrBytes)
 	} else {
-		joinList = append(joinList, strBucket)
+		strBuf.WriteString(strBucket)
 	}
 	slot, err := strconv.Atoi(lastChar)
 	if err != nil {
 		fmt.Println("Cannot parse slot for db insert")
 		panic(err)
 	}
-	res := strings.Join(joinList, "")
+	res := strBuf.String()
+	strBuf.Reset()
 
 	return res, slot
 }
