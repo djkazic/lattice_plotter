@@ -3,7 +3,6 @@ package main
 import (
 	// "encoding/hex"
 	"fmt"
-	"os"
 	"runtime"
 	"time"
 	"runtime/pprof"
@@ -18,10 +17,6 @@ func main() {
 	parseFlags()        // Parse flags
 
 	fmt.Printf("Address set: %s\n", address)
-	baseDir = fmt.Sprintf(baseDir, address)
-	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
-		err = os.MkdirAll(baseDir, 0755)
-	}
 	endNumPlots := 2147483647
 
 	checkBaseDir()      // Check status of base directory
