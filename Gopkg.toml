@@ -24,15 +24,6 @@
 #   go-tests = true
 #   unused-packages = true
 
-
-[[constraint]]
-  name = "github.com/cornelk/hashmap"
-  revision = "b893f4923161d485d2151f427c378e09784ec1db"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/magical/argon2"
-
 [[constraint]]
   name = "github.com/mr-tron/base58"
   version = "1.1.0"

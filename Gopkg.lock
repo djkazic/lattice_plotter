@@ -2,29 +2,6 @@
 
 
 [[projects]]
-  digest = "1:90a52b2e006c21d53b90e3e2df4cdd37de3ba7bed05feb037f9a5c218d0781b9"
-  name = "github.com/cornelk/hashmap"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "b893f4923161d485d2151f427c378e09784ec1db"
-
-[[projects]]
-  digest = "1:6d9f91ff6cc1a7fa2f1c7025b0dc50ea7cd2a9b6869205bc7f69f484a349c731"
-  name = "github.com/dchest/blake2b"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "06006a921c7d13e3fdf63c401cb0e4529a26e6e4"
-  version = "v1.0.0"
-
-[[projects]]
-  digest = "1:2915e1464ca9a9480ed2fb94d6939cdf418525b03b24bfb256486990abd8155a"
-  name = "github.com/dchest/siphash"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "ca249f45189071f5d44dc6401334e3572037b9cb"
-  version = "v1.2.0"
-
-[[projects]]
   branch = "master"
   digest = "1:0bfbe13936953a98ae3cfe8ed6670d396ad81edf069a806d2f6515d7bb6950df"
   name = "github.com/google/btree"
@@ -34,11 +11,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:85d73d8bf5ca7685d8c88d99ca2e6296dec67da9019c4b3c4ebb70a4c88084cb"
-  name = "github.com/magical/argon2"
+  digest = "1:9bf89de9d88024778fef62089e47b41bea65966ea6c043e9dcd29c2cd901fe1a"
+  name = "github.com/ivpusic/grpool"
   packages = ["."]
   pruneopts = "UT"
-  revision = "190e3cf208e185668db6aa048e4985b7b7b4d890"
+  revision = "28957a27c9441f178d644aa598bac0aad4dd7bba"
 
 [[projects]]
   digest = "1:0c1028c687ce81af3a804a4434da0d68fc392e0343ab701bb2af1fd34bbee208"
@@ -47,6 +24,14 @@
   pruneopts = "UT"
   revision = "89529c6904fcd077434931b4eac8b4b2f0991baf"
   version = "v1.1.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:f7aa53146bf79462509d4ce136826ebbd64907e4679e1b04e62758da6b68e589"
+  name = "github.com/orcaman/concurrent-map"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "b28018939af9022337862b94a463abb18abb3e0e"
 
 [[projects]]
   branch = "master"
@@ -79,16 +64,45 @@
   pruneopts = "UT"
   revision = "9b9efcf221b50905aab9bbabd3daed56dc10f339"
 
+[[projects]]
+  digest = "1:c468422f334a6b46a19448ad59aaffdfc0a36b08fdcc1c749a0b29b6453d7e59"
+  name = "github.com/valyala/bytebufferpool"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "e746df99fe4a3986f4d4f79e13c1e0117ce9c2f7"
+  version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:8e2a555b39ec178e4bfb309456e4b7359f2858e133011320194fe02b7fa4a68b"
+  name = "golang.org/x/crypto"
+  packages = [
+    "argon2",
+    "blake2b",
+  ]
+  pruneopts = "UT"
+  revision = "eb0de9b17e854e9b1ccd9963efafc79862359959"
+
+[[projects]]
+  branch = "master"
+  digest = "1:8392490b249a3602a13813be12324d3b16eca044ae185ff32cdd9e267706e208"
+  name = "golang.org/x/sys"
+  packages = ["cpu"]
+  pruneopts = "UT"
+  revision = "4ed8d59d0b35e1e29334a206d1b3f38b1e5dfb31"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/cornelk/hashmap",
-    "github.com/magical/argon2",
+    "github.com/ivpusic/grpool",
     "github.com/mr-tron/base58",
+    "github.com/orcaman/concurrent-map",
     "github.com/peterbourgon/diskv",
     "github.com/phf/go-queue/queue",
     "github.com/tevino/abool",
+    "github.com/valyala/bytebufferpool",
+    "golang.org/x/crypto/argon2",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

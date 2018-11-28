@@ -8,8 +8,8 @@ import (
 	"github.com/phf/go-queue/queue"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
+	"github.com/valyala/bytebufferpool"
 )
 
 var (
@@ -23,7 +23,6 @@ var (
 
 func processPlots(nonce int) {
 	var (
-		strBuf strings.Builder
 		hashList   []string
 		childQueue queue.Queue
 		prQueue    queue.Queue
@@ -31,12 +30,12 @@ func processPlots(nonce int) {
 
 	// Calculate this nonce's starting hash
 	strNonce := strconv.Itoa(nonce)
-	strBuf.WriteString(address)
-	strBuf.WriteString(strNonce)
+	buf := bytebufferpool.Get()
+	buf.WriteString(address)
+	buf.WriteString(strNonce)
 	plotStart = time.Now()
-	calcBytes := []byte(strBuf.String())
-	startingHash := calcHash(calcBytes)
-	strBuf.Reset()
+	startingHash := calcHash(buf.B)
+	bytebufferpool.Put(buf)
 
 	// Populate tree from root
 	childQueue.Init()
@@ -112,11 +111,12 @@ func calcChildren(root []byte, leftHash *[]byte, rightHash *[]byte) {
 }
 
 func calcSubNode(root []byte, instruct []byte, target *[]byte) {
-	var inputBytes [33]byte
-
-	copy(inputBytes[:32], root)
-	copy(inputBytes[32:], instruct)
-	*target = calcHash(inputBytes[:])
+	buf := bytebufferpool.Get()
+	buf.Write(root)
+	buf.Write(instruct)
+	inputBytes := buf.B
+	*target = calcHash(inputBytes)
+	bytebufferpool.Put(buf)
 }
 
 func serializeHashes(prQueue *queue.Queue, hashList *[]string, currHash []byte) {

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"github.com/valyala/bytebufferpool"
 )
 
 func writeData(ind int, nonce int, hashList *[]string) {
@@ -56,29 +57,28 @@ func validateData(ind int, nonce int, hashList *[]string) {
 }
 
 func calcKVPlacement(strNonce, segment string) (string, int) {
-	var strBuf strings.Builder
-
+	buf := bytebufferpool.Get()
 	endInd := len(strNonce) - 1
 	if endInd <= 0 {
 		endInd = 1
 	}
 	strBucket := strNonce[:endInd]
-	strBuf.WriteString(segment)
-	strBuf.Write(slashBytes)
+	buf.WriteString(segment)
+	buf.Write(slashBytes)
 	lastChar := strNonce[endInd:]
 	if len(strNonce) <= 1 {
 		lastChar = strNonce
-		strBuf.Write(zeroStrBytes)
+		buf.Write(zeroStrBytes)
 	} else {
-		strBuf.WriteString(strBucket)
+		buf.WriteString(strBucket)
 	}
 	slot, err := strconv.Atoi(lastChar)
 	if err != nil {
 		fmt.Println("Cannot parse slot for db insert")
 		panic(err)
 	}
-	res := strBuf.String()
-	strBuf.Reset()
+	res := buf.String()
+	bytebufferpool.Put(buf)
 
 	return res, slot
 }
