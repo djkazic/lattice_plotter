@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	fmt.Println("Starting lattice plotter v0.9.9")
+	fmt.Println("Starting lattice plotter rc-1.0.0")
 
 	initMaps()          // Initialize handler map and output map
 	warmCache()         // Setup lookup table

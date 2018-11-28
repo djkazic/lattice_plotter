@@ -50,7 +50,6 @@ func validateData(ind int, nonce int, hashList *[]string) {
 			fmt.Printf("Error detected on line %d of bucket %s!\n", nonce+1, strKey)
 			fmt.Printf("actual: %s\n", strVal)
 			fmt.Printf("wanted: %s\n", hash)
-			fmt.Printf("index: %d\n", ind)
 			os.Exit(1)
 		}
 	}
