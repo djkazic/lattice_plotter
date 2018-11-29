@@ -57,7 +57,7 @@ func processPlots(nonce int) {
 			}
 			plotEnd = time.Since(plotStart)
 			fmt.Printf("Nonce %s verified in %s\n", strNonce, plotEnd)
-		} else {
+		} else if minePlots {
 			// Write for hashList
 			for ind := range hashList {
 				writeData(ind, nonce, &hashList)

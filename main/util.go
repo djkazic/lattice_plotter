@@ -35,6 +35,7 @@ var (
 )
 
 var (
+	minePlots   = false
 	verifyPlots = false
 	quitNow *abool.AtomicBool
 	gracefulStop = make(chan os.Signal)
@@ -120,7 +121,7 @@ func getNonceCount() {
 		if verifyPlots {
 			numExistingPlots = intNonceCount
 			fmt.Printf("endNumPlots = %d\n", numExistingPlots)
-		} else {
+		} else if minePlots {
 			// If the nonceCount is smaller than the explicitly set startPoint
 			shortestLen = intNonceCount
 			fmt.Printf("shortestLen = %d\n", shortestLen)

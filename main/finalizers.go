@@ -3,10 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/valyala/bytebufferpool"
 	"os"
 	"strconv"
 	"strings"
-	"github.com/valyala/bytebufferpool"
 )
 
 func writeData(ind int, nonce int, hashList *[]string) {

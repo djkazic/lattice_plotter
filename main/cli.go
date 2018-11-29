@@ -25,7 +25,8 @@ func parseFlags() {
 	}
 
 	verifyPlots = os.Args[1] == "verify"
-	if !verifyPlots {
+	minePlots = os.Args[1] == "mine"
+	if minePlots {
 		err := startCmd.Parse(os.Args[2:])
 		if err != nil {
 			printUsage()
@@ -33,12 +34,12 @@ func parseFlags() {
 		}
 	}
 	err := verifyCmd.Parse(os.Args[2:])
-	if err != nil {
+	if err != nil || (!verifyPlots && !minePlots) {
 		printUsage()
 		return
 	}
 
-	if !verifyPlots {
+	if minePlots {
 		if !startCmd.Parsed() || *parsedAddress == "" {
 			fmt.Println("Please enter a valid address to mine plots for")
 		}
@@ -50,7 +51,7 @@ func parseFlags() {
 				fmt.Printf("Mine start point set to %d\n", startPoint)
 			}
 		}
-	} else {
+	} else if verifyPlots {
 		if !verifyCmd.Parsed() || *verifyAddress == "" {
 			fmt.Println("Please enter a valid address to verify plots for")
 		}

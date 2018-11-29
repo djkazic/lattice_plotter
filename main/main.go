@@ -33,7 +33,7 @@ func main() {
 	start := time.Now()
 	if verifyPlots {
 		endNumPlots = numExistingPlots
-	} else {
+	} else if minePlots {
 		// Prefer the smaller of shortestLen or startPoint
 		decideStartPoint()
 	}
