@@ -17,6 +17,7 @@ func main() {
 	parseFlags()        // Parse flags
 
 	fmt.Printf("Address set: %s\n", address)
+	baseDir = fmt.Sprintf(baseDir, address)
 	endNumPlots := 2147483647
 
 	checkBaseDir()      // Check status of base directory

@@ -17,6 +17,7 @@ var (
 	plotEnd time.Duration
 
 	hashMap  cmap.ConcurrentMap
+	cacheMap cmap.ConcurrentMap
 	indTable [4096]string
 	subPool = grpool.NewPool(runtime.NumCPU() * 8, runtime.NumCPU())
 )
@@ -31,8 +32,8 @@ func processPlots(nonce int) {
 	// Calculate this nonce's starting hash
 	strNonce := strconv.Itoa(nonce)
 	buf := bytebufferpool.Get()
-	buf.WriteString(address)
-	buf.WriteString(strNonce)
+	_, _ = buf.WriteString(address)
+	_, _ = buf.WriteString(strNonce)
 	plotStart = time.Now()
 	startingHash := calcHash(buf.B)
 	bytebufferpool.Put(buf)
@@ -71,8 +72,9 @@ func processPlots(nonce int) {
 	hashList = nil
 
 	// If plot count exceeds shortestLen, update counter
-	if !verifyPlots && nonce > shortestLen {
+	if minePlots && nonce > shortestLen && nonce % 10 == 0 {
 		incrementNonceCt(nonce)
+		fmt.Println("Checkpoint! Nonces committed to disk")
 	}
 }
 

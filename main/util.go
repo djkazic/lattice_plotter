@@ -48,6 +48,7 @@ var (
 
 func initMaps() {
 	hashMap = cmap.New()
+	cacheMap = cmap.New()
 }
 
 func warmCache() {

@@ -11,10 +11,17 @@ import (
 
 func writeData(ind int, nonce int, hashList *[]string) {
 	if db != nil {
+		var readGroup string
+
 		segment := cachedPrefixLookup(ind)
 		strNonce := strconv.Itoa(nonce)
 		strKey, slot := calcKVPlacement(strNonce, segment)
-		readGroup := db.ReadString(strKey)
+		if tmp, ok := cacheMap.Get(strKey); ok {
+			readGroup = tmp.(string)
+		} else {
+			readGroup = db.ReadString(strKey)
+		}
+
 		readSplit := strings.Split(readGroup, "\n")
 		if len(readSplit) < 10 {
 			neededSlots := 10 - len(readSplit)
@@ -24,10 +31,16 @@ func writeData(ind int, nonce int, hashList *[]string) {
 		}
 		readSplit[slot] = (*hashList)[ind]
 		readStr := strings.Join(readSplit, "\n")
-		err := db.WriteString(strKey, readStr)
-		if err != nil {
-			// Could not update tx
-			panic(err)
+
+		if nonce % 10 != 0 {
+			cacheMap.Set(strKey, readStr)
+		} else if nonce != 0 {
+			cacheMap.Remove(strKey)
+			err := db.WriteString(strKey, readStr)
+			if err != nil {
+				// Could not update tx
+				panic(err)
+			}
 		}
 	}
 }
