@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"strconv"
+	"sync"
 	"syscall"
 )
 
@@ -31,6 +32,7 @@ var (
 	zeroStrBytes     = []byte("0")
 	oneStrBytes      = []byte("1")
 	slashBytes       = []byte("/")
+	dmpMutex         sync.Mutex
 	profiling = false
 )
 

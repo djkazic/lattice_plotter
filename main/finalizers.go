@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func writeData(ind int, nonce int, hashList *[]string) {
+func writeData(ind int, nonce int, hashList *[]string, checkPointing bool) {
 	if db != nil {
 		var readGroup string
 
@@ -32,15 +32,15 @@ func writeData(ind int, nonce int, hashList *[]string) {
 		readSplit[slot] = (*hashList)[ind]
 		readStr := strings.Join(readSplit, "\n")
 
-		if nonce % 10 != 0 {
-			cacheMap.Set(strKey, readStr)
-		} else if nonce != 0 {
-			cacheMap.Remove(strKey)
+		if checkPointing {
 			err := db.WriteString(strKey, readStr)
 			if err != nil {
 				// Could not update tx
 				panic(err)
 			}
+			cacheMap.Remove(strKey)
+		} else {
+			cacheMap.Set(strKey, readStr)
 		}
 	}
 }

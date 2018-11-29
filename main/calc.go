@@ -24,6 +24,7 @@ var (
 
 func processPlots(nonce int) {
 	var (
+		commit     bool
 		hashList   []string
 		childQueue queue.Queue
 		prQueue    queue.Queue
@@ -49,6 +50,10 @@ func processPlots(nonce int) {
 
 	prQueue.Init()
 	serializeHashes(&prQueue, &hashList, startingHash) // Post process hashMap -> hashList
+	commit = (nonce + 1) % 10 == 0 && nonce != 0
+	// commit = true
+	// We reach capacity at 9, technically
+	// Nonce + 1 % 10?
 
 	if !quitNow.IsSet() {
 		if verifyPlots {
@@ -60,8 +65,14 @@ func processPlots(nonce int) {
 			fmt.Printf("Nonce %s verified in %s\n", strNonce, plotEnd)
 		} else if minePlots {
 			// Write for hashList
+			if commit {
+				fmt.Println("Committing nonces to disk")
+			}
 			for ind := range hashList {
-				writeData(ind, nonce, &hashList)
+				writeData(ind, nonce, &hashList, commit)
+			}
+			if commit {
+				initMaps()
 			}
 			plotEnd = time.Since(plotStart)
 			fmt.Printf("Nonce %s timing: %s\n", strNonce, plotEnd)
@@ -72,9 +83,8 @@ func processPlots(nonce int) {
 	hashList = nil
 
 	// If plot count exceeds shortestLen, update counter
-	if minePlots && nonce > shortestLen && nonce % 10 == 0 {
+	if minePlots && nonce > shortestLen && commit {
 		incrementNonceCt(nonce)
-		fmt.Println("Checkpoint! Nonces committed to disk")
 	}
 }
 

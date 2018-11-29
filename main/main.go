@@ -39,7 +39,7 @@ func main() {
 		decideStartPoint()
 	}
 	// Main loop
-	for i := startPoint; i < endNumPlots; i++ {
+	for i := startPoint; i <= endNumPlots; i++ {
 		if quitNow.IsSet() {
 			break
 		}
