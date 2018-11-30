@@ -47,7 +47,7 @@ func writeData(ind int, nonce int, hashList *[]string, checkPointing bool, wg *s
 	}
 }
 
-func validateData(ind int, nonce int, hashList *[]string) {
+func validateData(ind int, nonce int, hashList *[]string, wg *sync.WaitGroup) {
 	if db != nil {
 		segment := cachedPrefixLookup(ind)
 		strNonce := strconv.Itoa(nonce)
@@ -67,6 +67,7 @@ func validateData(ind int, nonce int, hashList *[]string) {
 			fmt.Printf("wanted: %s\n", hash)
 			os.Exit(1)
 		}
+		wg.Done()
 	}
 }
 

@@ -59,9 +59,12 @@ func processPlots(nonce int) {
 	if !quitNow.IsSet() {
 		if verifyPlots {
 			// Validate for hashList
+			var validateWg sync.WaitGroup
+			validateWg.Add(len(hashList))
 			for ind := range hashList {
-				validateData(ind, nonce, &hashList)
+				validateData(ind, nonce, &hashList, &validateWg)
 			}
+			validateWg.Wait()
 			plotEnd = time.Since(plotStart)
 			fmt.Printf("Nonce %s verified in %s\n", strNonce, plotEnd)
 		} else if minePlots {
