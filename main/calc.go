@@ -62,7 +62,7 @@ func processPlots(nonce int) {
 			var validateWg sync.WaitGroup
 			validateWg.Add(len(hashList))
 			for ind := range hashList {
-				validateData(ind, nonce, &hashList, &validateWg)
+				go validateData(ind, nonce, &hashList, &validateWg)
 			}
 			validateWg.Wait()
 			plotEnd = time.Since(plotStart)
