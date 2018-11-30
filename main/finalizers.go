@@ -7,9 +7,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 )
 
-func writeData(ind int, nonce int, hashList *[]string, checkPointing bool) {
+func writeData(ind int, nonce int, hashList *[]string, checkPointing bool, wg *sync.WaitGroup) {
 	if db != nil {
 		var readGroup string
 
@@ -42,6 +43,7 @@ func writeData(ind int, nonce int, hashList *[]string, checkPointing bool) {
 		} else {
 			cacheMap.Set(strKey, readStr)
 		}
+		wg.Done()
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/phf/go-queue/queue"
 	"runtime"
 	"strconv"
+	"sync"
 	"time"
 	"github.com/valyala/bytebufferpool"
 )
@@ -65,14 +66,19 @@ func processPlots(nonce int) {
 			fmt.Printf("Nonce %s verified in %s\n", strNonce, plotEnd)
 		} else if minePlots {
 			// Write for hashList
+			var writeWg sync.WaitGroup
+			writeWg.Add(len(hashList))
 			if commit {
 				fmt.Println("Committing nonces to disk")
-			}
-			for ind := range hashList {
-				writeData(ind, nonce, &hashList, commit)
-			}
-			if commit {
+				for ind := range hashList {
+					go writeData(ind, nonce, &hashList, commit, &writeWg)
+				}
+				writeWg.Wait()
 				initMaps()
+			} else {
+				for ind := range hashList {
+					writeData(ind, nonce, &hashList, commit, &writeWg)
+				}
 			}
 			plotEnd = time.Since(plotStart)
 			fmt.Printf("Nonce %s timing: %s\n", strNonce, plotEnd)
