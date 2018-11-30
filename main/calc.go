@@ -79,7 +79,9 @@ func processPlots(nonce int) {
 			writeSem := semaphore.NewWeighted(512)
 			writeWg.Add(len(hashList))
 			if commit {
+				fmt.Println("==============================")
 				fmt.Println("Committing nonces to disk")
+				fmt.Println("==============================")
 				for ind, hash := range hashList {
 					if err := writeSem.Acquire(writeCtx, 1); err != nil {
 						fmt.Println(err)
