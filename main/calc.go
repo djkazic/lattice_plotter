@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 	"github.com/valyala/bytebufferpool"
+	"golang.org/x/sync/semaphore"
+	"context"
 )
 
 var (
@@ -52,17 +54,20 @@ func processPlots(nonce int) {
 	prQueue.Init()
 	serializeHashes(&prQueue, &hashList, startingHash) // Post process hashMap -> hashList
 	commit = (nonce + 1) % 10 == 0 && nonce != 0
-	// commit = true
-	// We reach capacity at 9, technically
-	// Nonce + 1 % 10?
 
 	if !quitNow.IsSet() {
 		if verifyPlots {
 			// Validate for hashList
 			var validateWg sync.WaitGroup
+			validateCtx := context.TODO()
+			validateSem := semaphore.NewWeighted(512)
 			validateWg.Add(len(hashList))
-			for ind := range hashList {
-				go validateData(ind, nonce, &hashList, &validateWg)
+			for ind, hash := range hashList {
+				if err := validateSem.Acquire(validateCtx, 1); err != nil {
+					fmt.Println(err)
+					break
+				}
+				go validateData(ind, nonce, hash, &validateWg, validateSem)
 			}
 			validateWg.Wait()
 			plotEnd = time.Since(plotStart)
@@ -70,17 +75,23 @@ func processPlots(nonce int) {
 		} else if minePlots {
 			// Write for hashList
 			var writeWg sync.WaitGroup
+			writeCtx := context.TODO()
+			writeSem := semaphore.NewWeighted(512)
 			writeWg.Add(len(hashList))
 			if commit {
 				fmt.Println("Committing nonces to disk")
-				for ind := range hashList {
-					go writeData(ind, nonce, &hashList, commit, &writeWg)
+				for ind, hash := range hashList {
+					if err := writeSem.Acquire(writeCtx, 1); err != nil {
+						fmt.Println(err)
+						break
+					}
+					go writeData(ind, nonce, hash, commit, &writeWg, writeSem)
 				}
 				writeWg.Wait()
 				initMaps()
 			} else {
-				for ind := range hashList {
-					writeData(ind, nonce, &hashList, commit, &writeWg)
+				for ind, hash := range hashList {
+					writeData(ind, nonce, hash, commit, &writeWg, nil)
 				}
 			}
 			plotEnd = time.Since(plotStart)

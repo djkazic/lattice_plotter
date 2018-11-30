@@ -8,9 +8,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"golang.org/x/sync/semaphore"
 )
 
-func writeData(ind int, nonce int, hashList *[]string, checkPointing bool, wg *sync.WaitGroup) {
+func writeData(ind int, nonce int, hash string, checkPointing bool, wg *sync.WaitGroup, sem *semaphore.Weighted) {
 	if db != nil {
 		var readGroup string
 
@@ -30,7 +31,7 @@ func writeData(ind int, nonce int, hashList *[]string, checkPointing bool, wg *s
 				readSplit = append(readSplit, "")
 			}
 		}
-		readSplit[slot] = (*hashList)[ind]
+		readSplit[slot] = hash
 		readStr := strings.Join(readSplit, "\n")
 
 		if checkPointing {
@@ -44,10 +45,13 @@ func writeData(ind int, nonce int, hashList *[]string, checkPointing bool, wg *s
 			cacheMap.Set(strKey, readStr)
 		}
 		wg.Done()
+		if sem != nil {
+			sem.Release(1)
+		}
 	}
 }
 
-func validateData(ind int, nonce int, hashList *[]string, wg *sync.WaitGroup) {
+func validateData(ind int, nonce int, hash string, wg *sync.WaitGroup, sem *semaphore.Weighted) {
 	if db != nil {
 		segment := cachedPrefixLookup(ind)
 		strNonce := strconv.Itoa(nonce)
@@ -59,7 +63,6 @@ func validateData(ind int, nonce int, hashList *[]string, wg *sync.WaitGroup) {
 			panic(err)
 		}
 		strVal := readSplit[slot]
-		hash := (*hashList)[ind]
 		if strVal != hash {
 			quitNow.Set()
 			fmt.Printf("Error detected on line %d of bucket %s!\n", nonce+1, strKey)
@@ -68,6 +71,7 @@ func validateData(ind int, nonce int, hashList *[]string, wg *sync.WaitGroup) {
 			os.Exit(1)
 		}
 		wg.Done()
+		sem.Release(1)
 	}
 }
 
