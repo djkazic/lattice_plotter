@@ -1,18 +1,17 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"github.com/ivpusic/grpool"
 	"github.com/orcaman/concurrent-map"
 	"github.com/phf/go-queue/queue"
-	"runtime"
+	"github.com/valyala/bytebufferpool"
+	"golang.org/x/sync/semaphore"
 	"strconv"
 	"sync"
 	"time"
-	"github.com/valyala/bytebufferpool"
-	"golang.org/x/sync/semaphore"
-	"context"
 )
 
 var (
@@ -21,7 +20,7 @@ var (
 
 	cacheMap cmap.ConcurrentMap
 	indTable [4096]string
-	subPool = grpool.NewPool(runtime.NumCPU() * 8, runtime.NumCPU())
+	subPool  *grpool.Pool
 )
 
 func processPlots(nonce int) {
@@ -62,7 +61,7 @@ func processPlots(nonce int) {
 			// Validate for hashList
 			var validateWg sync.WaitGroup
 			validateCtx := context.TODO()
-			validateSem := semaphore.NewWeighted(512)
+			validateSem := semaphore.NewWeighted(768)
 			validateWg.Add(len(hashList))
 			for ind, hash := range hashList {
 				if err := validateSem.Acquire(validateCtx, 1); err != nil {
@@ -78,7 +77,7 @@ func processPlots(nonce int) {
 			// Write for hashList
 			var writeWg sync.WaitGroup
 			writeCtx := context.TODO()
-			writeSem := semaphore.NewWeighted(512)
+			writeSem := semaphore.NewWeighted(768)
 			writeWg.Add(len(hashList))
 			if commit {
 				fmt.Println("==============================")

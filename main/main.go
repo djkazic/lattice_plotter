@@ -9,9 +9,10 @@ import (
 )
 
 func main() {
-	fmt.Println("Starting lattice plotter rc-1.0.0")
+	fmt.Println("Starting lattice plotter rc-1.0.1")
 
 	initMaps()          // Initialize cache map
+	initPools()         // Start worker pool
 	warmIndexCache()    // Setup lookup table
 	setupGracefulStop() // Start graceful stop goroutine
 	parseFlags()        // Parse flags

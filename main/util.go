@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"github.com/ivpusic/grpool"
 	"github.com/mr-tron/base58"
 	"github.com/orcaman/concurrent-map"
 	"github.com/peterbourgon/diskv"
@@ -48,6 +49,10 @@ var (
 
 func initMaps() {
 	cacheMap = cmap.New()
+}
+
+func initPools() {
+	subPool = grpool.NewPool(runtime.NumCPU() * 8, runtime.NumCPU())
 }
 
 func warmIndexCache() {
