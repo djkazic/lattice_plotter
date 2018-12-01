@@ -19,7 +19,6 @@ var (
 	plotStart time.Time
 	plotEnd time.Duration
 
-	hashMap  cmap.ConcurrentMap
 	cacheMap cmap.ConcurrentMap
 	indTable [4096]string
 	subPool = grpool.NewPool(runtime.NumCPU() * 8, runtime.NumCPU())
@@ -31,7 +30,10 @@ func processPlots(nonce int) {
 		hashList   []string
 		childQueue queue.Queue
 		prQueue    queue.Queue
+		hashMap    cmap.ConcurrentMap
 	)
+	// Init hashMap
+	hashMap = cmap.New()
 
 	// Calculate this nonce's starting hash
 	strNonce := strconv.Itoa(nonce)
@@ -39,7 +41,7 @@ func processPlots(nonce int) {
 	_, _ = buf.WriteString(address)
 	_, _ = buf.WriteString(strNonce)
 	plotStart = time.Now()
-	startingHash := calcHash(buf.B)
+	startingHash := CalcHash(buf.B)
 	bytebufferpool.Put(buf)
 
 	// Populate tree from root
@@ -48,11 +50,11 @@ func processPlots(nonce int) {
 
 	// Iterative approach instead of recursive: we save on memory overhead
 	for hashMap.Count() < totalNodes {
-		computeNode(&childQueue)
+		computeNode(&childQueue, &hashMap)
 	}
 
 	prQueue.Init()
-	serializeHashes(&prQueue, &hashList, startingHash) // Post process hashMap -> hashList
+	serializeHashes(&prQueue, &hashList, startingHash, &hashMap) // Post process hashMap -> hashList
 	commit = (nonce + 1) % 10 == 0 && nonce != 0
 
 	if !quitNow.IsSet() {
@@ -110,14 +112,13 @@ func processPlots(nonce int) {
 	}
 }
 
-func computeNode(chpQueue *queue.Queue) {
+func computeNode(chpQueue *queue.Queue, hashMap *cmap.ConcurrentMap) {
 	// 12 layers under root = 4095 nodes
-	var leftHash, rightHash []byte
-
 	if hashMap.Count() < totalNodes {
-		root := chpQueue.PopFront().([]byte)
+		var leftHash, rightHash []byte
 
 		// Block until children node hashes calculated
+		root := chpQueue.PopFront().([]byte)
 		calcChildren(root, &leftHash, &rightHash)
 
 		// Store children hashes in hashMap
@@ -146,14 +147,14 @@ func calcChildren(root []byte, leftHash *[]byte, rightHash *[]byte) {
 
 func calcSubNode(root []byte, instruct []byte, target *[]byte) {
 	buf := bytebufferpool.Get()
-	buf.Write(root)
-	buf.Write(instruct)
+	_, _ = buf.Write(root)
+	_, _ = buf.Write(instruct)
 	inputBytes := buf.B
-	*target = calcHash(inputBytes)
+	*target = CalcHash(inputBytes)
 	bytebufferpool.Put(buf)
 }
 
-func serializeHashes(prQueue *queue.Queue, hashList *[]string, currHash []byte) {
+func serializeHashes(prQueue *queue.Queue, hashList *[]string, currHash []byte, hashMap *cmap.ConcurrentMap) {
 	currHashStr := hex.EncodeToString(currHash)
 	*hashList = append(*hashList, currHashStr)
 	tmp, ok := hashMap.Get(currHashStr)
@@ -165,6 +166,6 @@ func serializeHashes(prQueue *queue.Queue, hashList *[]string, currHash []byte) 
 	}
 	for prQueue.Len() > 0 && len(*hashList) < totalNodes {
 		head := prQueue.PopFront().([]byte)
-		serializeHashes(prQueue, hashList, head)
+		serializeHashes(prQueue, hashList, head, hashMap)
 	}
 }

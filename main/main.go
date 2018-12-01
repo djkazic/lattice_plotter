@@ -11,8 +11,8 @@ import (
 func main() {
 	fmt.Println("Starting lattice plotter rc-1.0.0")
 
-	initMaps()          // Initialize handler map and output map
-	warmCache()         // Setup lookup table
+	initMaps()          // Initialize cache map
+	warmIndexCache()    // Setup lookup table
 	setupGracefulStop() // Start graceful stop goroutine
 	parseFlags()        // Parse flags
 

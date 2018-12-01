@@ -81,15 +81,16 @@ func calcKVPlacement(strNonce, segment string) (string, int) {
 	if endInd <= 0 {
 		endInd = 1
 	}
-	strBucket := strNonce[:endInd]
-	buf.WriteString(segment)
-	buf.Write(slashBytes)
-	lastChar := strNonce[endInd:]
+	_, _ = buf.WriteString(segment)
+	_, _ = buf.Write(slashBytes)
+	var lastChar string
 	if len(strNonce) <= 1 {
 		lastChar = strNonce
-		buf.Write(zeroStrBytes)
+		_, _ = buf.Write(zeroStrBytes)
 	} else {
-		buf.WriteString(strBucket)
+		strBucket := strNonce[:endInd]
+		_, _ = buf.WriteString(strBucket)
+		lastChar = strNonce[endInd:]
 	}
 	slot, err := strconv.Atoi(lastChar)
 	if err != nil {

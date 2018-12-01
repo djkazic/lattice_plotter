@@ -14,7 +14,6 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"strconv"
-	"sync"
 	"syscall"
 )
 
@@ -32,7 +31,6 @@ var (
 	zeroStrBytes     = []byte("0")
 	oneStrBytes      = []byte("1")
 	slashBytes       = []byte("/")
-	dmpMutex         sync.Mutex
 	profiling = false
 )
 
@@ -49,11 +47,10 @@ var (
 )
 
 func initMaps() {
-	hashMap = cmap.New()
 	cacheMap = cmap.New()
 }
 
-func warmCache() {
+func warmIndexCache() {
 	// Allocate + fill indTable
 	for i := 0; i < 4096; i++ {
 		indTable[i] = fmt.Sprintf("%04d", i)
@@ -89,14 +86,17 @@ func cachedPrefixLookup(ind int) string {
 	return prefix
 }
 
-func calcHash(input []byte) []byte {
+func CalcHash(input []byte) []byte {
 	return argon2.Key(input, input, 1, 1024, 2, 32)
 }
 
 func checkBaseDir() {
 	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
 		fmt.Println("Base directory not found. Creating...")
-		os.MkdirAll(baseDir, os.ModePerm)
+		err := os.MkdirAll(baseDir, os.ModePerm)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
