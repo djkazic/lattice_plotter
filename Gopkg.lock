@@ -106,6 +106,7 @@
     "github.com/orcaman/concurrent-map",
     "github.com/phf/go-queue/queue",
     "github.com/syndtr/goleveldb/leveldb",
+    "github.com/syndtr/goleveldb/leveldb/errors",
     "github.com/tevino/abool",
     "github.com/valyala/bytebufferpool",
     "golang.org/x/crypto/argon2",
