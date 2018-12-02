@@ -92,7 +92,7 @@ func cachedPrefixLookup(ind int) string {
 }
 
 func CalcHash(input []byte) []byte {
-	return argon2.Key(input, input, 1, 1024, 2, 32)
+	return argon2.IDKey(input, input, 1, 1024, 2, 128)[:32]
 }
 
 func checkBaseDir() {
