@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/valyala/bytebufferpool"
@@ -8,12 +10,12 @@ import (
 	"strconv"
 )
 
-func writeData(ind int, nonce int, hash string) {
+func writeData(ind int, nonce int, hash []byte) {
 	if db != nil {
 		segment := cachedPrefixLookup(ind)
 		strNonce := strconv.Itoa(nonce)
 		key := calcKVPlacement(strNonce, segment)
-		err := db.Put(key, []byte(hash), nil)
+		err := db.Put(key, hash, nil)
 		if err != nil {
 			// Could not update tx
 			panic(err)
@@ -21,7 +23,7 @@ func writeData(ind int, nonce int, hash string) {
 	}
 }
 
-func validateData(ind int, nonce int, hash string) {
+func validateData(ind int, nonce int, hash []byte) {
 	if db != nil {
 		segment := cachedPrefixLookup(ind)
 		strNonce := strconv.Itoa(nonce)
@@ -30,12 +32,11 @@ func validateData(ind int, nonce int, hash string) {
 		if err != nil && err != leveldb.ErrNotFound {
 			panic(err)
 		}
-		strVal := string(valBytes)
-		if strVal != hash {
+		if !bytes.Equal(valBytes, hash) {
 			quitNow.Set()
 			fmt.Printf("Error detected on line %d of bucket %s!\n", nonce+1, string(key))
-			fmt.Printf("actual: %s\n", strVal)
-			fmt.Printf("wanted: %s\n", hash)
+			fmt.Printf("actual: %s\n", hex.EncodeToString(valBytes))
+			fmt.Printf("wanted: %s\n", hex.EncodeToString(hash))
 			os.Exit(1)
 		}
 	}

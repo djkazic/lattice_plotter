@@ -21,7 +21,7 @@ var (
 
 func processPlots(nonce int) {
 	var (
-		hashList   []string
+		hashList   [][]byte
 		childQueue queue.Queue
 		prQueue    queue.Queue
 		hashMap    cmap.ConcurrentMap
@@ -119,9 +119,9 @@ func calcSubNode(root []byte, instruct []byte, target *[]byte) {
 	*target = CalcHash(inputBytes)
 }
 
-func serializeHashes(prQueue *queue.Queue, hashList *[]string, currHash []byte, hashMap *cmap.ConcurrentMap) {
+func serializeHashes(prQueue *queue.Queue, hashList *[][]byte, currHash []byte, hashMap *cmap.ConcurrentMap) {
 	currHashStr := hex.EncodeToString(currHash)
-	*hashList = append(*hashList, currHashStr)
+	*hashList = append(*hashList, currHash)
 	tmp, ok := hashMap.Get(currHashStr)
 	if ok && tmp != nil {
 		val := tmp.([][]byte)
