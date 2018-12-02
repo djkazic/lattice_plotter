@@ -10,16 +10,12 @@ import (
 	"strconv"
 )
 
-func writeData(ind int, nonce int, hash []byte) {
+func writeData(ind int, nonce int, hash []byte, batch *leveldb.Batch) {
 	if db != nil {
 		segment := cachedPrefixLookup(ind)
 		strNonce := strconv.Itoa(nonce)
 		key := calcKVPlacement(strNonce, segment)
-		err := db.Put(key, hash, nil)
-		if err != nil {
-			// Could not update tx
-			panic(err)
-		}
+		batch.Put(key, hash)
 	}
 }
 

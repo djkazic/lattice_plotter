@@ -6,6 +6,7 @@ import (
 	"github.com/ivpusic/grpool"
 	"github.com/orcaman/concurrent-map"
 	"github.com/phf/go-queue/queue"
+	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/valyala/bytebufferpool"
 	"strconv"
 	"time"
@@ -34,13 +35,13 @@ func processPlots(nonce int) {
 	buf := bytebufferpool.Get()
 	_, _ = buf.WriteString(address)
 	_, _ = buf.WriteString(strNonce)
-	plotStart = time.Now()
 	startingHash := CalcHash(buf.B)
 	bytebufferpool.Put(buf)
 
 	// Populate tree from root
 	childQueue.Init()
 	childQueue.PushBack(startingHash)
+	plotStart = time.Now()
 
 	// Iterative approach instead of recursive: we save on memory overhead
 	for hashMap.Count() < totalNodes {
@@ -57,11 +58,17 @@ func processPlots(nonce int) {
 				validateData(ind, nonce, hash)
 			}
 			plotEnd = time.Since(plotStart)
-			fmt.Printf("Nonce %s verified in %s\n", strNonce, plotEnd)
+			fmt.Printf("Nonce %s validated: %s\n", strNonce, plotEnd)
 		} else if minePlots {
 			// Write for hashList
+			batch := new(leveldb.Batch)
 			for ind, hash := range hashList {
-				writeData(ind, nonce, hash)
+				writeData(ind, nonce, hash, batch)
+			}
+			err := db.Write(batch, nil)
+			if err != nil {
+				// Could not update tx
+				panic(err)
 			}
 			plotEnd = time.Since(plotStart)
 			fmt.Printf("Nonce %s timing: %s\n", strNonce, plotEnd)

@@ -129,11 +129,11 @@ func getNonceCount() {
 		}
 		if verifyPlots {
 			numExistingPlots = intNonceCount
-			fmt.Printf("endNumPlots = %d\n", numExistingPlots)
+			fmt.Printf("Plots found: %d\n", numExistingPlots)
 		} else if minePlots {
 			// If the nonceCount is smaller than the explicitly set startPoint
 			shortestLen = intNonceCount
-			fmt.Printf("shortestLen = %d\n", shortestLen)
+			fmt.Printf("Previous plots found: %d\n", shortestLen)
 		}
 	}
 	if !firstStart && val == "" {
