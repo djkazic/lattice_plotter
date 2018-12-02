@@ -1,16 +1,13 @@
 package main
 
 import (
-	"context"
 	"encoding/hex"
 	"fmt"
 	"github.com/ivpusic/grpool"
 	"github.com/orcaman/concurrent-map"
 	"github.com/phf/go-queue/queue"
 	"github.com/valyala/bytebufferpool"
-	"golang.org/x/sync/semaphore"
 	"strconv"
-	"sync"
 	"time"
 )
 
@@ -18,14 +15,12 @@ var (
 	plotStart time.Time
 	plotEnd time.Duration
 
-	cacheMap cmap.ConcurrentMap
 	indTable [4096]string
 	subPool  *grpool.Pool
 )
 
 func processPlots(nonce int) {
 	var (
-		commit     bool
 		hashList   []string
 		childQueue queue.Queue
 		prQueue    queue.Queue
@@ -54,48 +49,19 @@ func processPlots(nonce int) {
 
 	prQueue.Init()
 	serializeHashes(&prQueue, &hashList, startingHash, &hashMap) // Post process hashMap -> hashList
-	commit = (nonce + 1) % 10 == 0 && nonce != 0
 
 	if !quitNow.IsSet() {
 		if verifyPlots {
 			// Validate for hashList
-			var validateWg sync.WaitGroup
-			validateCtx := context.TODO()
-			validateSem := semaphore.NewWeighted(768)
-			validateWg.Add(len(hashList))
 			for ind, hash := range hashList {
-				if err := validateSem.Acquire(validateCtx, 1); err != nil {
-					fmt.Println(err)
-					break
-				}
-				go validateData(ind, nonce, hash, &validateWg, validateSem)
+				validateData(ind, nonce, hash)
 			}
-			validateWg.Wait()
 			plotEnd = time.Since(plotStart)
 			fmt.Printf("Nonce %s verified in %s\n", strNonce, plotEnd)
 		} else if minePlots {
 			// Write for hashList
-			var writeWg sync.WaitGroup
-			writeCtx := context.TODO()
-			writeSem := semaphore.NewWeighted(768)
-			writeWg.Add(len(hashList))
-			if commit {
-				fmt.Println("==============================")
-				fmt.Println("Committing nonces to disk")
-				fmt.Println("==============================")
-				for ind, hash := range hashList {
-					if err := writeSem.Acquire(writeCtx, 1); err != nil {
-						fmt.Println(err)
-						break
-					}
-					go writeData(ind, nonce, hash, commit, &writeWg, writeSem)
-				}
-				writeWg.Wait()
-				initMaps()
-			} else {
-				for ind, hash := range hashList {
-					writeData(ind, nonce, hash, commit, &writeWg, nil)
-				}
+			for ind, hash := range hashList {
+				writeData(ind, nonce, hash)
 			}
 			plotEnd = time.Since(plotStart)
 			fmt.Printf("Nonce %s timing: %s\n", strNonce, plotEnd)
@@ -106,7 +72,7 @@ func processPlots(nonce int) {
 	hashList = nil
 
 	// If plot count exceeds shortestLen, update counter
-	if minePlots && nonce > shortestLen && commit {
+	if minePlots && nonce > shortestLen {
 		incrementNonceCt(nonce)
 	}
 }
@@ -149,8 +115,8 @@ func calcSubNode(root []byte, instruct []byte, target *[]byte) {
 	_, _ = buf.Write(root)
 	_, _ = buf.Write(instruct)
 	inputBytes := buf.B
-	*target = CalcHash(inputBytes)
 	bytebufferpool.Put(buf)
+	*target = CalcHash(inputBytes)
 }
 
 func serializeHashes(prQueue *queue.Queue, hashList *[]string, currHash []byte, hashMap *cmap.ConcurrentMap) {

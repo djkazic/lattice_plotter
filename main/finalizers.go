@@ -1,104 +1,53 @@
 package main
 
 import (
-	"errors"
 	"fmt"
+	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/valyala/bytebufferpool"
 	"os"
 	"strconv"
-	"strings"
-	"sync"
-	"golang.org/x/sync/semaphore"
 )
 
-func writeData(ind int, nonce int, hash string, checkPointing bool, wg *sync.WaitGroup, sem *semaphore.Weighted) {
+func writeData(ind int, nonce int, hash string) {
 	if db != nil {
-		var readGroup string
-
 		segment := cachedPrefixLookup(ind)
 		strNonce := strconv.Itoa(nonce)
-		strKey, slot := calcKVPlacement(strNonce, segment)
-		if tmp, ok := cacheMap.Get(strKey); ok {
-			readGroup = tmp.(string)
-		} else {
-			readGroup = db.ReadString(strKey)
-		}
-
-		readSplit := strings.Split(readGroup, "\n")
-		if len(readSplit) < 10 {
-			neededSlots := 10 - len(readSplit)
-			for i := 0; i < neededSlots; i++ {
-				readSplit = append(readSplit, "")
-			}
-		}
-		readSplit[slot] = hash
-		readStr := strings.Join(readSplit, "\n")
-
-		if checkPointing {
-			err := db.WriteString(strKey, readStr)
-			if err != nil {
-				// Could not update tx
-				panic(err)
-			}
-			cacheMap.Remove(strKey)
-		} else {
-			cacheMap.Set(strKey, readStr)
-		}
-		wg.Done()
-		if sem != nil {
-			sem.Release(1)
+		key := calcKVPlacement(strNonce, segment)
+		err := db.Put(key, []byte(hash), nil)
+		if err != nil {
+			// Could not update tx
+			panic(err)
 		}
 	}
 }
 
-func validateData(ind int, nonce int, hash string, wg *sync.WaitGroup, sem *semaphore.Weighted) {
+func validateData(ind int, nonce int, hash string) {
 	if db != nil {
 		segment := cachedPrefixLookup(ind)
 		strNonce := strconv.Itoa(nonce)
-		strKey, slot := calcKVPlacement(strNonce, segment)
-		readGroup := db.ReadString(strKey)
-		readSplit := strings.Split(readGroup, "\n")
-		if len(readSplit) < slot {
-			err := errors.New("could not locate slot in readSplit of db")
+		key := calcKVPlacement(strNonce, segment)
+		valBytes, err := db.Get(key, nil)
+		if err != nil && err != leveldb.ErrNotFound {
 			panic(err)
 		}
-		strVal := readSplit[slot]
+		strVal := string(valBytes)
 		if strVal != hash {
 			quitNow.Set()
-			fmt.Printf("Error detected on line %d of bucket %s!\n", nonce+1, strKey)
+			fmt.Printf("Error detected on line %d of bucket %s!\n", nonce+1, string(key))
 			fmt.Printf("actual: %s\n", strVal)
 			fmt.Printf("wanted: %s\n", hash)
 			os.Exit(1)
 		}
-		wg.Done()
-		sem.Release(1)
 	}
 }
 
-func calcKVPlacement(strNonce, segment string) (string, int) {
+func calcKVPlacement(strNonce, segment string) ([]byte) {
 	buf := bytebufferpool.Get()
-	endInd := len(strNonce) - 1
-	if endInd <= 0 {
-		endInd = 1
-	}
 	_, _ = buf.WriteString(segment)
 	_, _ = buf.Write(slashBytes)
-	var lastChar string
-	if len(strNonce) <= 1 {
-		lastChar = strNonce
-		_, _ = buf.Write(zeroStrBytes)
-	} else {
-		strBucket := strNonce[:endInd]
-		_, _ = buf.WriteString(strBucket)
-		lastChar = strNonce[endInd:]
-	}
-	slot, err := strconv.Atoi(lastChar)
-	if err != nil {
-		fmt.Println("Cannot parse slot for db insert")
-		panic(err)
-	}
-	res := buf.String()
+	_, _ = buf.WriteString(strNonce)
+	res := buf.B
 	bytebufferpool.Put(buf)
 
-	return res, slot
+	return res
 }

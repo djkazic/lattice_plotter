@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"github.com/ivpusic/grpool"
 	"github.com/mr-tron/base58"
-	"github.com/orcaman/concurrent-map"
-	"github.com/peterbourgon/diskv"
+	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/tevino/abool"
 	"golang.org/x/crypto/argon2"
 	"os"
@@ -43,13 +42,9 @@ var (
 )
 
 var (
-	db       *diskv.Diskv
+	db *leveldb.DB
 	maxWorkers int
 )
-
-func initMaps() {
-	cacheMap = cmap.New()
-}
 
 func initPools() {
 	subPool = grpool.NewPool(runtime.NumCPU() * 8, runtime.NumCPU())
@@ -73,6 +68,7 @@ func setupGracefulStop() {
 		if profiling {
 			pprof.StopCPUProfile()
 		}
+		db.Close()
 		fmt.Println("Data flushed! Cleaning up")
 	}()
 }
@@ -113,10 +109,15 @@ func checksum(payload []byte) []byte {
 }
 
 func getNonceCount() {
+	var val string
+
 	firstStart := false
 	strKey := "nonceCount"
-
-	val := db.ReadString(strKey)
+	valBytes, err := db.Get([]byte(strKey), nil)
+	val = string(valBytes)
+	if err != nil && err != leveldb.ErrNotFound {
+		panic(err)
+	}
 	if val == "" {
 		fmt.Println("Could not read nonceCount")
 		firstStart = true
@@ -144,7 +145,7 @@ func incrementNonceCt(nonceCount int) {
 	if db != nil && !quitNow.IsSet() {
 		strKey := "nonceCount"
 		strVal := strconv.Itoa(nonceCount)
-		err := db.WriteString(strKey, strVal)
+		err := db.Put([]byte(strKey), []byte(strVal), nil)
 		if err != nil {
 			fmt.Println("Cannot increment nonce, terminating")
 			panic(err)

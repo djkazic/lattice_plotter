@@ -3,11 +3,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0bfbe13936953a98ae3cfe8ed6670d396ad81edf069a806d2f6515d7bb6950df"
-  name = "github.com/google/btree"
+  digest = "1:4a0c6bb4805508a6287675fac876be2ac1182539ca8a32468d8128882e9d5009"
+  name = "github.com/golang/snappy"
   packages = ["."]
   pruneopts = "UT"
-  revision = "4030bb1f1f0c35b30ca7009e9ebd06849dd45306"
+  revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
 
 [[projects]]
   branch = "master"
@@ -35,26 +35,32 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3bf17a6e6eaa6ad24152148a631d18662f7212e21637c2699bff3369b7f00fa2"
-  name = "github.com/petar/GoLLRB"
-  packages = ["llrb"]
-  pruneopts = "UT"
-  revision = "53be0d36a84c2a886ca057d34b6aa4468df9ccb4"
-
-[[projects]]
-  digest = "1:19bf2c203ba1b75e05a5b0c9e0845fbcb7800ae042cb187c25c4da4fcea072a8"
-  name = "github.com/peterbourgon/diskv"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "0646ccaebea1ed1539efcab30cae44019090093f"
-
-[[projects]]
-  branch = "master"
   digest = "1:66a729007b3d140b10e26f0a0d3d73a6cd2c7b832f0be2992c0d36da69c5df9c"
   name = "github.com/phf/go-queue"
   packages = ["queue"]
   pruneopts = "UT"
   revision = "9abe38d0371deb4049011737cbd30e4ba80c673b"
+
+[[projects]]
+  branch = "master"
+  digest = "1:685fdfea42d825ebd39ee0994354b46c374cf2c2b2d97a41a8dee1807c6a9b62"
+  name = "github.com/syndtr/goleveldb"
+  packages = [
+    "leveldb",
+    "leveldb/cache",
+    "leveldb/comparer",
+    "leveldb/errors",
+    "leveldb/filter",
+    "leveldb/iterator",
+    "leveldb/journal",
+    "leveldb/memdb",
+    "leveldb/opt",
+    "leveldb/storage",
+    "leveldb/table",
+    "leveldb/util",
+  ]
+  pruneopts = "UT"
+  revision = "b001fa50d6b27f3f0bb175a87d0cb55426d0a0ae"
 
 [[projects]]
   branch = "master"
@@ -85,14 +91,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5e4d81c50cffcb124b899e4f3eabec3930c73532f0096c27f94476728ba03028"
-  name = "golang.org/x/sync"
-  packages = ["semaphore"]
-  pruneopts = "UT"
-  revision = "42b317875d0fa942474b76e1b46a6060d720ae6e"
-
-[[projects]]
-  branch = "master"
   digest = "1:8392490b249a3602a13813be12324d3b16eca044ae185ff32cdd9e267706e208"
   name = "golang.org/x/sys"
   packages = ["cpu"]
@@ -106,12 +104,11 @@
     "github.com/ivpusic/grpool",
     "github.com/mr-tron/base58",
     "github.com/orcaman/concurrent-map",
-    "github.com/peterbourgon/diskv",
     "github.com/phf/go-queue/queue",
+    "github.com/syndtr/goleveldb/leveldb",
     "github.com/tevino/abool",
     "github.com/valyala/bytebufferpool",
     "golang.org/x/crypto/argon2",
-    "golang.org/x/sync/semaphore",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
