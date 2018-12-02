@@ -47,7 +47,7 @@ var (
 )
 
 func initPools() {
-	subPool = grpool.NewPool(runtime.NumCPU() * 8, runtime.NumCPU())
+	subPool = grpool.NewPool(runtime.NumCPU() * 4, runtime.NumCPU() * 2)
 }
 
 func warmIndexCache() {
