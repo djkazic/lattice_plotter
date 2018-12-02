@@ -122,8 +122,8 @@ func calcSubNode(root []byte, instruct []byte, target *[]byte) {
 	_, _ = buf.Write(root)
 	_, _ = buf.Write(instruct)
 	inputBytes := buf.B
-	bytebufferpool.Put(buf)
 	*target = CalcHash(inputBytes)
+	bytebufferpool.Put(buf)
 }
 
 func serializeHashes(prQueue *queue.Queue, hashList *[][]byte, currHash []byte, hashMap *cmap.ConcurrentMap) {

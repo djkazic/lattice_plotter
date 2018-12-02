@@ -69,6 +69,7 @@ func setupGracefulStop() {
 			pprof.StopCPUProfile()
 		}
 		db.Close()
+		db = nil
 		fmt.Println("Data flushed! Cleaning up")
 	}()
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
+	"time"
 )
 
 func openDB() {
@@ -18,4 +19,6 @@ func openDB() {
 			panic(err)
 		}
 	}
+	// In case compaction is triggered
+	time.Sleep(time.Second)
 }
